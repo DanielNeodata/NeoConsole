@@ -5,10 +5,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-
 
 namespace NeoConsole
 {
@@ -17,104 +17,94 @@ namespace NeoConsole
     {
         static async Task Main(string[] args)
         {
-            Funciones comandosRef = new Funciones();
-            MethodInfo[] metodos = typeof(Funciones).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
-            
-            var opciones = ScriptOptions.Default
+            /*Define opciones*/
+            ScriptOptions _opt = ScriptOptions.Default
                 .AddReferences(typeof(Funciones).Assembly)
                 .AddImports("System", "System.Linq", "System.Collections.Generic", "System.Math");
-
-            ScriptState<object> estado = null;
-            StringBuilder bufferCode = new StringBuilder();
-            int nivelIndentacion = 0;
-
-            Console.WriteLine("=== C# AVANZADO (Multilínea) ===");
-            Console.WriteLine("Si escribes ';' o '}' al final de la linea, ejecuta la sentencia y la mantiene en el Buffer");
-            Console.WriteLine("Si escribes la sentencia sin ';' al final ejecuta el método que esté disponible o da error.");
-            MostrarAyuda(metodos);
+            
+            /*Instancia clase de control*/
+            State _S = new State("uno", _opt);
+            
+            /*Muestra ayuda por default*/
+			Console.Write(_S.Help().ToString());
 
             while (true)
             {
                 // Cambiamos el prompt si estamos dentro de un bloque
-                Console.ForegroundColor = nivelIndentacion > 0 ? ConsoleColor.Yellow : ConsoleColor.Cyan;
-                Console.Write(nivelIndentacion > 0 ? "... " : "C#> ");
+                Console.ForegroundColor = _S.indent > 0 ? ConsoleColor.Yellow : ConsoleColor.Cyan;
+                Console.Write(_S.indent > 0 ? "... " : "C#> ");
                 Console.ResetColor();
 
-                string entrada = Console.ReadLine();
-                if (string.IsNullOrWhiteSpace(entrada) && bufferCode.Length == 0)
-                {
-                    MostrarAyuda(metodos);
-                    ListarMetodosDinamicos(estado);
-                    continue;
-                }
-                if (entrada?.ToLower() == "salir" || entrada?.ToLower() == "exit" || entrada?.ToLower() == "quit") break;
-                if (entrada?.ToLower() == "cls") { Console.Clear(); MostrarAyuda(metodos); continue; }
-                if (entrada?.ToLower() == "clear") { Console.Clear(); bufferCode.Clear(); nivelIndentacion = 0; estado = null; MostrarAyuda(metodos); continue; }
+				/*-------------------------------------------------*/
+				/*Tratamiento del comando enviado por el prompt*/
+				/*-------------------------------------------------*/
+				bool _continue = true;
+				string input = Console.ReadLine();
+                /*Executa el commando enviado por linea*/
+				StringBuilder _sb = _S.Exec(input, out _continue);
 
-                bufferCode.AppendLine(entrada);
+                Console.Clear();
+                Console.Write(_sb.ToString());
+                if (!_continue) { break; }
+				_S.bufferCode.AppendLine(input);
 
-                // Contamos llaves para saber si el bloque está completo
-                nivelIndentacion += entrada.Count(f => f == '{') - entrada.Count(f => f == '}');
+				// Contamos llaves para saber si el bloque está completo
+				_S.indent += (input.Count(f => f == '{') - input.Count(f => f == '}'));
 
                 // Si no hay bloques abiertos, ejecutamos
-                if (nivelIndentacion <= 0)
+                if (_S.indent <= 0)
                 {
-                    string codigoAEjecutar = bufferCode.ToString();
-                    bufferCode.Clear();
-                    nivelIndentacion = 0; // Reset por seguridad
+					bool exists = false;
+					string codeToExec = _S.bufferCode.ToString();
+					_S.bufferCode.Clear();
+					_S.indent = 0; // Reset por seguridad
 
                     // Forzamos los tipos de variables antes de compilar
-                    string codigoReparado = PreProcesador.RepararTipos(codigoAEjecutar, comandosRef);
-
-                    bool existe = false;
+                    string codeFixed = PreProcesador.RepararTipos(codeToExec, _S.Commands);
                     try
                     {
-                        string codigoVerificar = codigoReparado.Replace("(", " ");
-                        codigoVerificar = codigoVerificar.Replace(")", " ");
-                        codigoVerificar = codigoVerificar.Replace("\r", "");
-                        codigoVerificar = codigoVerificar.Replace("\n", "");
+                        string codeVerified = codeFixed.Replace("(", " ").Replace(")", " ").Replace("\r", "").Replace("\n", "");
+						int iLen = (codeVerified.Length - 1);
 
-                        // Regex mágica para separar por espacios pero respetar lo que está entre comillas
-                        List<string> partes = Regex.Matches(codigoVerificar, @"[\""].+?[\""]|[^ ]+")
+						// Regex mágica para separar por espacios pero respetar lo que está entre comillas
+						List<string> segments = Regex.Matches(codeVerified, @"[\""].+?[\""]|[^ ]+")
                             .Cast<Match>()
                             .Select(m => m.Value.Replace("\"", "")) // Quitamos las comillas al final
                             .ToList();
-                        string nombreComando = partes[0];
-                        string[] argumentos = partes.Skip(1).ToArray();
+                        string commandName = segments[0];
+                        string[] arguments = segments.Skip(1).ToArray();
 
-                        MethodInfo metodo = metodos.FirstOrDefault(m => m.Name.Equals(nombreComando, StringComparison.OrdinalIgnoreCase));
-
-                        if (codigoVerificar[codigoVerificar.Length - 1].ToString() != ";" && codigoVerificar[codigoVerificar.Length - 1].ToString() != "}")
+                        MethodInfo Method = _S.Methods.FirstOrDefault(m => m.Name.Equals(commandName, StringComparison.OrdinalIgnoreCase));
+                        if (codeVerified[iLen].ToString() != ";" && codeVerified[iLen].ToString() != "}")
                         {
-                            if (metodo == null)
+                            if (Method == null)
                             {
-                                if (estado != null)
+                                if (_S.Status != null)
                                 {
                                     // Recorremos todos los scripts en la cadena (del más nuevo al más viejo)
-                                    var scriptActual = estado.Script;
-                                    var metodosVistos = new HashSet<string>(); // Para evitar duplicados si se redefine algo
+                                    Script scriptActual = _S.Status.Script;
+									HashSet<string> methodViewed = new HashSet<string>(); // Para evitar duplicados si se redefine algo
 
                                     while (scriptActual != null)
                                     {
-                                        var compilacion = scriptActual.GetCompilation();
+                                        Compilation compilacion = scriptActual.GetCompilation();
 
                                         // Buscamos los símbolos en esta sumisión específica
-                                        var simbolos = compilacion.GetSymbolsWithName(s => true, SymbolFilter.Member)
+                                        IEnumerable<ISymbol> symbols = compilacion.GetSymbolsWithName(s => true, SymbolFilter.Member)
                                                                   .OfType<IMethodSymbol>()
                                                                   .Where(m => !m.IsImplicitlyDeclared &&
                                                                               m.MethodKind == MethodKind.Ordinary);
 
-                                        foreach (var s in simbolos)
+                                        foreach (ISymbol s in symbols)
                                         {
                                             string firma = s.ToDisplayString();
-                                            if (metodosVistos.Add(firma)) // Si es nuevo en la lista, lo imprimimos
+                                            if (methodViewed.Add(firma)) // Si es nuevo en la lista, lo imprimimos
                                             {
-                                                if (s.Name == nombreComando)
+                                                if (s.Name == commandName)
                                                 {
-                                                    existe = true;
+                                                    exists = true;
                                                     break;
                                                 }
-                                                
                                             }
                                         }
 
@@ -123,29 +113,30 @@ namespace NeoConsole
                                     }
                                 }
                             }
-
                         }
                         else
                         {
-                            existe = true;
+                            exists = true;
                         }
 
-                        if (existe)
+                        if (exists)
                         {
-                            if (estado == null)
+                            if (_S.Status == null)
                             {
-                                estado = await CSharpScript.RunAsync(codigoReparado, opciones, globals: comandosRef);
+								_S.Status = await CSharpScript.RunAsync(codeFixed, _S.Options, globals: _S.Commands);
                             }
                             else
                             {
-                                estado = await estado.ContinueWithAsync(codigoReparado);
+								_S.Status = await _S.Status.ContinueWithAsync(codeFixed);
                             }
 
-                            if (estado.ReturnValue != null)
+                            if (_S.Status.ReturnValue != null)
                             {
                                 Console.ForegroundColor = ConsoleColor.Green;
-                                Console.WriteLine($"=> {estado.ReturnValue}");
-                                Console.ResetColor();
+                                Console.WriteLine("---Respuesta:");
+								Console.WriteLine($"=> {_S.Status.ReturnValue}");
+								Console.WriteLine("----------------------------End.");
+								Console.ResetColor();
                             }
                         }
                         else
@@ -153,13 +144,12 @@ namespace NeoConsole
                             Console.ForegroundColor = ConsoleColor.Red;
                             Console.WriteLine("Comando no encontrado.");
                             Console.ResetColor();
-                            MostrarAyuda(metodos);
-                            ListarMetodosDinamicos(estado);
-                        }
+							_S.ListDynMethods();
+						}
                     }
                     catch (Exception ex)
                     {
-                        if (existe)
+                        if (exists)
                         {
                             Console.ForegroundColor = ConsoleColor.Red;
                             Console.WriteLine($"[Error]: {ex.Message}");
@@ -170,55 +160,6 @@ namespace NeoConsole
                 }
             }
 
-        }
-        static void MostrarAyuda(MethodInfo[] methods)
-        {
-            Console.WriteLine("\n--- COMANDOS DISPONIBLES ---");
-            foreach (var x in methods)
-            {
-                var paramsStr = string.Join(", ", x.GetParameters().Select(p => $"{p.ParameterType.Name} {p.Name}"));
-                Console.WriteLine($"  {x.Name.PadRight(15)} -> ({string.Join(", ", paramsStr)})");
-            }
-            Console.WriteLine("  Cls             -> Borra la pantalla");
-            Console.WriteLine("  Clear           -> Borra la pantalla y el buffer");
-            Console.WriteLine("  Salir           -> Cierra la aplicación");
-            Console.WriteLine("----------------------------");
-        }
-        
-        static void ListarMetodosDinamicos(ScriptState<object> estado)
-        {
-            if (estado == null) return;
-
-            // Recorremos todos los scripts en la cadena (del más nuevo al más viejo)
-            var scriptActual = estado.Script;
-            var metodosVistos = new HashSet<string>(); // Para evitar duplicados si se redefine algo
-            while (scriptActual != null)
-            {
-                Compilation compilacion = scriptActual.GetCompilation();
-
-                // Buscamos los símbolos en esta sumisión específica
-                var simbolos = compilacion.GetSymbolsWithName(s => true, SymbolFilter.Member)
-                                          .OfType<IMethodSymbol>()
-                                          .Where(m => !m.IsImplicitlyDeclared &&
-                                                       m.MethodKind == MethodKind.Ordinary);
-
-                foreach (var s in simbolos)
-                {
-                    string firma = s.ToDisplayString();
-                    if (metodosVistos.Add(firma)) // Si es nuevo en la lista, lo imprimimos
-                    {
-                        Console.Write($"  {s.Name.ToString().PadRight(15)} -> (");
-                        for (int qp = 0; qp < s.Parameters.Length; qp++)
-                        {
-                            Console.Write($"{s.Parameters[qp]}");
-                        }
-                        Console.WriteLine(")");
-                    }
-                }
-
-                // Subimos al script anterior en la cadena de ContinueWith
-                scriptActual = scriptActual.Previous;
-            }
         }
     }
 }
