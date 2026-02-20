@@ -10,7 +10,7 @@ namespace NeoConsole
 		static async Task Main(string[] args)
 		{
 			/*Instancia clase de control*/
-			Context _CTX = new Context("Test", new Test());
+			Context _CTX = new Context("Test", "NeoConsole.Test");
 
 			/*Muestra ayuda por default*/
 			Tools.ConsoleWrite(Tools.Help(_CTX).ToString(), true, null);

@@ -19,11 +19,11 @@ namespace NeoConsole
 		public int indent { get; set; }
 
 		/*Constructor*/
-		public Context(string _key, object _class)
+		public Context(string _key, string _class)
 		{
-			//Type type = Type.GetType(_class);
+			Type type = Type.GetType(_class);
 			Key = _key;
-			Commands = _class;// Activator.CreateInstance(type);
+			Commands = Activator.CreateInstance(type);
 			Methods = type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
 			Options = ScriptOptions.Default.AddReferences(type.Assembly).AddImports("System", "System.Text");
 			bufferCode = new StringBuilder();
