@@ -136,42 +136,37 @@ namespace NeoConsole
 			_state.Arguments = segments.Skip(1).ToArray();
 			_state.Method = _CTX.GetMethodByName(_state.CommandName);
 			_state.Exists = false;
-			_state.Exists = false;
 			/*-------------------------------------------------------------------------------------------*/
 
 			return _state;
 		}
-		public static bool Exec(Context _CTX)
+		public static string Exec(Context _CTX)
 		{
-			bool _continue = true;
+			string _continue = "continue";
 			StringBuilder _sb = new StringBuilder();
 			if (string.IsNullOrWhiteSpace(_CTX.Input) && _CTX.bufferCode.Length == 0) { _CTX.Input = "null"; }
-			try
+			switch (_CTX.Input.ToLower())
 			{
-				switch (_CTX.Input)
-				{
-					case "null":
-						_sb = ListDynMethods(_CTX);
-						break;
-					case "salir":
-					case "exit":
-					case "quit":
-						_continue = false;
-						break;
-					case "cls":
-						throw new Exception("cls");
-					case "clear":
-						_CTX.bufferCode.Clear();
-						_CTX.indent = 0;
-						_CTX.Status = null;
-						throw new Exception("clear");
-					default:
-						break;
-				}
-			}
-			catch (Exception ex)
-			{
-				_sb = Help(_CTX);
+				case "null":
+					_sb = ListDynMethods(_CTX);
+					break;
+				case "salir":
+				case "exit":
+				case "quit":
+					_continue = "break";
+					break;
+				case "cls":
+					_sb = Help(_CTX);
+					break;
+				case "clear":
+					_CTX.bufferCode.Clear();
+					_CTX.indent = 0;
+					_CTX.Status = null;
+					_sb = Help(_CTX);
+					break;
+				default:
+					_continue = "skip";
+					break;
 			}
 			Tools.ConsoleWrite(_sb.ToString(), true, null);
 			return _continue;
