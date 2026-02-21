@@ -10,43 +10,43 @@ namespace NeoConsole
 		static async Task Main(string[] args)
 		{
 			/*Instancia clase de control*/
-			Context _CTX = new Context("Test", "NeoConsole.Test");
+			Context _CTX = new Context("Test", new Test());
 
 			/*Muestra ayuda por default*/
-			Tools.ConsoleWrite(Tools.Help(_CTX).ToString(), true, null);
+			Tools.ConsoleWrite(_CTX, Tools.Help(_CTX).ToString(), true, null);
 
-			/*Muestra el prompt*/
-			_CTX.ConsolePrompt();
-
-			bool _eval = true;
-			while (_eval)
+			while (true)
 			{
-				/*Lee valor enviado desde la consola, es lo PRIMERO A HACER*/
 				_CTX.Input = Console.ReadLine();
-
-				/*Continua o sale del bucle de acuerdo a lo entregado por el Exec*/
-				switch (Tools.Exec(_CTX))
+				if (!string.IsNullOrWhiteSpace(_CTX.Input))
 				{
-					case "break":
-						_eval = false;
-						break;
-					case "continue":
-						break;
-					case "skip":
-						/*Si continua agrega la data enviada desde la consola como línea*/
-						_CTX.bufferCode.AppendLine(_CTX.Input);
-
-						/* Contamos llaves para saber si el bloque está completo*/
-						_CTX.indent += (_CTX.Input.Count(f => f == '{') - _CTX.Input.Count(f => f == '}'));
-
-						/*Si no hay bloques abiertos, ejecutamos*/
-						if (_CTX.indent <= 0)
-						{
-							/*Se ejecutan las acciones de control y asignación previas al intento de ejecución
-							 *ES FUNDAMENTAL _State, ya que contiene todo el analisis previo y asignación del contexto */
-							await Interpreter.Evaluate(_CTX);
+					if (_CTX.Input.ToLower().StartsWith("[add_method]"))
+					{
+						/*Mecanismo para agregar method a la clase instanciada?*/
+					}
+					else
+					{
+						await Interpreter.Evaluate(_CTX);
+						/*Posprocesamiento de valores de respuesta*/
+						if (_CTX.Status.ReturnValue.ToString().StartsWith("do:")) {
+							switch (_CTX.Status.ReturnValue.ToString().Split(':')[1]) {
+								case "clear":
+									Tools.ConsoleClear();
+									Tools.ConsolePrompt(_CTX);
+									break;
+								case "help":
+									Tools.ConsoleWrite(_CTX, Tools.Help(_CTX).ToString(), true, null);
+									break;
+								case "exit":
+									System.Environment.Exit(0);
+									break;
+							}
 						}
-						break;
+					}
+				}
+				else
+				{
+					Tools.ConsoleWrite(_CTX, "No se ha enviado ningún comando", true, ConsoleColor.Magenta);
 				}
 			}
 		}

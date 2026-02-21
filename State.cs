@@ -11,6 +11,5 @@ namespace NeoConsole
 		public StringBuilder CodeVerified { get; set; }
 		public string CommandName { get; set; }
 		public string[] Arguments { get; set; }
-		public bool Exists { get; set; }
 	}
 }

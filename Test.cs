@@ -4,7 +4,7 @@ using System.Text;
 
 namespace NeoConsole
 {
-	public class Test
+	public class Test: Abstract
 	{
 		public string Check(string tipo, int totalRegistros)
 		{
@@ -62,7 +62,7 @@ namespace NeoConsole
 
 			return result;
 		}
-		public string TestCode()
+		public string TestCode(int i)
 		{
 			string Documento = "17634250";
 			string Nombre = "Ruben";
