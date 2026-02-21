@@ -22,22 +22,28 @@ namespace NeoConsole
 					_CTX.State.ReturnValue = _CTX.State.Method.Invoke(_CTX.Commands, _CTX.State.Arguments);
 				}
 				else {
-					Script scriptActual = _CTX.Status.Script;
-					while (scriptActual != null)
+					if (_CTX.Status != null)
 					{
-						Compilation compilation = scriptActual.GetCompilation();
-						IEnumerable<ISymbol> symbols = compilation.GetSymbolsWithName(s => true, SymbolFilter.Member).OfType<IMethodSymbol>().Where(m => !m.IsImplicitlyDeclared && m.MethodKind == MethodKind.Ordinary);
-						foreach (ISymbol s in symbols)
+						Script scriptActual = _CTX.Status.Script;
+						while (scriptActual != null)
 						{
-							if (s.Name == _CTX.State.CommandName) {
-								_CTX.Status = await _CTX.Status.ContinueWithAsync(_CTX.State.CodeVerified.ToString());
-								_CTX.State.ReturnValue = _CTX.Status.ReturnValue;
-								break;
+							Compilation compilation = scriptActual.GetCompilation();
+							IEnumerable<ISymbol> symbols = compilation.GetSymbolsWithName(s => true, SymbolFilter.Member).OfType<IMethodSymbol>().Where(m => !m.IsImplicitlyDeclared && m.MethodKind == MethodKind.Ordinary);
+							foreach (ISymbol s in symbols)
+							{
+								if (s.Name == _CTX.State.CommandName)
+								{
+									_CTX.Status = await _CTX.Status.ContinueWithAsync(_CTX.State.CodeVerified.ToString());
+									_CTX.State.ReturnValue = _CTX.Status.ReturnValue;
+									break;
+								}
 							}
+							scriptActual = scriptActual.Previous;
 						}
-						scriptActual = scriptActual.Previous;
 					}
-
+					else {
+						throw new Exception("Imposible ejecutar el comando solicitado");
+					}
 				}
 				await Response(_CTX);
 			}

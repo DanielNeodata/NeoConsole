@@ -134,7 +134,9 @@ namespace NeoConsole
 			/*Asigna valores a la estructura de retorno*/
 			/*-------------------------------------------------------------------------------------------*/
 			string[] segments = codeToExec.Split('(');
-			string[] arguments = segments[1].Replace(")", "").Trim().Split(',');
+			string[] arguments = Array.Empty<string>();
+
+			if (segments.Length > 1) { arguments = segments[1].Replace(")", "").Trim().Split(','); }
 
 			_CTX.State.CodeVerified = _sb;
 			_CTX.State.LastChar = _sb[_sb.Length - 1].ToString();
