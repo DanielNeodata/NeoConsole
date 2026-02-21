@@ -18,21 +18,30 @@ namespace NeoConsole
 		public ScriptState<object> Status { get; set; }
 		public dynamic Commands { get; set; }
 		public MethodInfo[] Methods { get; set; }
+		public Type Type { get; set; }
+		public Abstract Abstract { get; set; }
+		public Type TypeAbstract { get; set; }
+		public MethodInfo[] MethodsAbstract { get; set; }
 
 		/*Constructor*/
 		public Context(string _key, object _class)
 		{
 			Key = _key;
-			Type type = Type.GetType(_class.ToString());
-			Commands = Activator.CreateInstance(type);
-			Methods = type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
-			Options = ScriptOptions.Default.AddReferences(type.Assembly).AddImports("System", "System.Text");
+			Type = Type.GetType(_class.ToString());
+			Commands = Activator.CreateInstance(Type);
+			Methods = Type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+			Options = ScriptOptions.Default.AddReferences(Type.Assembly).AddImports("System", "System.Text");
+			Abstract = new Abstract();
+			TypeAbstract = Type.GetType(Abstract.ToString());
+			MethodsAbstract = TypeAbstract.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
 		}
 
 		/*Métodos*/
 		public MethodInfo GetMethodByName(string commandName)
 		{
-			return Methods.FirstOrDefault(m => m.Name.Equals(commandName, StringComparison.OrdinalIgnoreCase));
+			MethodInfo _m = Methods.FirstOrDefault(m => m.Name.Equals(commandName, StringComparison.OrdinalIgnoreCase));
+			if (_m == null) { _m = MethodsAbstract.FirstOrDefault(m => m.Name.Equals(commandName, StringComparison.OrdinalIgnoreCase)); }
+			return _m;
 		}
 	}
 }

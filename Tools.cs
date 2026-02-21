@@ -20,10 +20,10 @@ namespace NeoConsole
 		{
 			Console.Clear();
 		}
-
 		public static void ConsolePrompt(Context _CTX)
 		{
-			Console.ForegroundColor = ConsoleColor.Cyan;
+			Console.ForegroundColor = ConsoleColor.DarkCyan;
+			Console.WriteLine(Environment.NewLine); 
 			Console.Write("ND#> ");
 			Console.ResetColor();
 		}
@@ -34,7 +34,21 @@ namespace NeoConsole
 			if (_clear) { Console.Clear(); }
 			if (!string.IsNullOrWhiteSpace(_data)) { Console.WriteLine(_data); }
 			Console.ResetColor();
-			ConsolePrompt(_CTX);
+		}
+		public static void ConsoleError(Context _CTX, Exception ex)
+		{
+			ConsoleWrite(_CTX, $"[Error]: {ex.Message}", true, ConsoleColor.Red);
+		}
+
+		public static string ListMethods(MethodInfo[] _methods, string _title) {
+			StringBuilder _sb = new StringBuilder();
+			_sb.AppendLine(_title);
+			foreach (MethodInfo x in _methods)
+			{
+				string paramsStr = string.Join(", ", x.GetParameters().Select(p => $"{p.ParameterType.Name.ToLower()} {p.Name}"));
+				_sb.AppendLine($"   {x.Name}({string.Join(", ", paramsStr)})");
+			}
+			return _sb.ToString();
 		}
 
 		public static StringBuilder Help(Context _CTX)
@@ -43,33 +57,23 @@ namespace NeoConsole
 			_sb.AppendLine(Separator());
 			_sb.AppendLine("COMANDOS DISPONIBLES");
 			_sb.AppendLine(Separator());
-			_sb.AppendLine("* Comandos de línea:");
-			_sb.AppendLine("     Help()            -> Muestra esta pantalla de ayuda");
-			_sb.AppendLine("     Clear()           -> Borra la pantalla y el buffer");
-			_sb.AppendLine("     Exit()            -> Cierra la aplicación");
-			_sb.AppendLine(Environment.NewLine);
+			_sb.AppendLine(ListMethods(_CTX.MethodsAbstract, "* Funciones abstractas:"));
+			_sb.AppendLine(ListMethods(_CTX.Methods, "* Funciones definidas:"));
 
-			_sb.AppendLine("* Funciones definidas:");
-			foreach (MethodInfo x in _CTX.Methods)
-			{
-				string paramsStr = string.Join(", ", x.GetParameters().Select(p => $"{p.ParameterType.Name} {p.Name}"));
-				_sb.AppendLine($"     {x.Name.PadRight(15)} -> ({string.Join(", ", paramsStr)})");
-			}
 			if (_CTX.Status != null)
 			{
-				_sb.AppendLine(Environment.NewLine);
 				_sb.AppendLine("* Funciones dinámicas:");
-
 				Script scriptActual = _CTX.Status.Script;
 				while (scriptActual != null)
 				{
-					Compilation compilacion = scriptActual.GetCompilation();
-					var simbolos = compilacion.GetSymbolsWithName(s => true, SymbolFilter.Member).OfType<IMethodSymbol>().Where(m => !m.IsImplicitlyDeclared && m.MethodKind == MethodKind.Ordinary);
-					foreach (var s in simbolos)
+					Compilation compilation = scriptActual.GetCompilation();
+					IEnumerable<ISymbol> symbols = compilation.GetSymbolsWithName(s => true, SymbolFilter.Member).OfType<IMethodSymbol>().Where(m => !m.IsImplicitlyDeclared && m.MethodKind == MethodKind.Ordinary);
+					foreach (ISymbol s in symbols)
 					{
-						_sb.AppendLine($"     {s.Name.ToString().PadRight(15)} -> (");
-						for (int qp = 0; qp < s.Parameters.Length; qp++) { _sb.AppendLine($"{s.Parameters[qp]}"); }
-						_sb.AppendLine(")");
+						string _params = "";
+						foreach (var p in ((IMethodSymbol)s.OriginalDefinition).Parameters) { _params += ($"{p.ToString()}, "); }
+						char[] _t = { ',', ' ' };
+						_sb.AppendLine($"   {s.Name.ToString()}({_params.TrimEnd(_t)})");
 					}
 					scriptActual = scriptActual.Previous;
 				}
@@ -80,51 +84,50 @@ namespace NeoConsole
 
 			return _sb;
 		}
+
+		public static object ConvertStringToParameterType(string value, ParameterInfo parameterInfo)
+		{
+			Type targetType = parameterInfo.ParameterType;
+			if (targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(Nullable<>))
+			{
+				if (value == null) { return null; }
+				targetType = Nullable.GetUnderlyingType(targetType);
+			}
+			try
+			{
+				return Convert.ChangeType(value, targetType);
+			}
+			catch (Exception ex) when (ex is InvalidCastException || ex is FormatException || ex is OverflowException)
+			{
+				return null;
+			}
+		}
 		public static State PrepareContext(Context _CTX)
 		{
 			_CTX.State = new State();
 			StringBuilder _sb = new StringBuilder();
 			string codeToExec = _CTX.Input;
-			foreach (MethodInfo Method in _CTX.Methods)
-			{
-				string patron = $@"\b{Method.Name}\s*\((.*?)\)";
-				MatchCollection matches = Regex.Matches(codeToExec, patron);
-				foreach (Match m in matches)
-				{
-					string _originals = m.Groups[1].Value;
-					if (!string.IsNullOrWhiteSpace(_originals))
-					{
-						ParameterInfo[] paramInfo = Method.GetParameters();
-						string[] arguments = _originals.Split(',');
-
-						if (arguments.Length == paramInfo.Length)
-						{
-							for (int i = 0; i < paramInfo.Length; i++)
-							{
-								if (paramInfo[i].ParameterType == typeof(string) && !arguments[i].Trim().StartsWith("\"")) { 
-									arguments[i] = $"({arguments[i].Trim()}).ToString()"; 
-								}
-							}
-							codeToExec = codeToExec.Replace(m.Value, $"{Method.Name}({string.Join(", ", arguments)})");
-						}
-					}
-				}
-			}
 			_sb.Append(codeToExec);
-
-			List<string> segments = Regex.Matches(_sb.ToString(), @"[\""].+?[\""]|[^ ]+")
-				.Cast<Match>()
-				.Select(m => m.Value.Replace("\"", "")) // Quitamos las comillas al final
-				.ToList();
 
 			/*-------------------------------------------------------------------------------------------*/
 			/*Asigna valores a la estructura de retorno*/
 			/*-------------------------------------------------------------------------------------------*/
+			string[] segments = codeToExec.Split('(');
+			string[] arguments = segments[1].Replace(")", "").Trim().Split(',');
+
 			_CTX.State.CodeVerified = _sb;
 			_CTX.State.LastChar = _sb[_sb.Length - 1].ToString();
 			_CTX.State.CommandName = segments[0];
-			_CTX.State.Arguments = segments.Skip(1).ToArray();
-			_CTX.State.Method = _CTX.GetMethodByName(_CTX.State.CommandName);
+			_CTX.State.Method = _CTX.GetMethodByName(segments[0]);
+			_CTX.State.Arguments = Array.Empty<object>();
+			if (_CTX.State.Method!=null && arguments.Length != 0)
+			{
+				ParameterInfo[] paramInfo = _CTX.State.Method.GetParameters();
+				for (int i = 0; i < paramInfo.Length; i++)
+				{
+					_CTX.State.Arguments = _CTX.State.Arguments.Append(ConvertStringToParameterType(arguments[i], paramInfo[i])).ToArray();
+				}
+			}
 			/*-------------------------------------------------------------------------------------------*/
 
 			return _CTX.State;

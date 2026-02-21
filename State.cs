@@ -10,6 +10,7 @@ namespace NeoConsole
 		public string LastChar { get; set; }
 		public StringBuilder CodeVerified { get; set; }
 		public string CommandName { get; set; }
-		public string[] Arguments { get; set; }
+		public object[] Arguments { get; set; }
+		public object? ReturnValue { get; set; }
 	}
 }
