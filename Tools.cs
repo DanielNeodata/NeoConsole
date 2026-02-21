@@ -3,11 +3,8 @@ using Microsoft.CodeAnalysis.Scripting;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.NetworkInformation;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace NeoConsole
 {
@@ -20,7 +17,7 @@ namespace NeoConsole
 		public static void ConsolePrompt(Context _CTX)
 		{
 			Console.ForegroundColor = ConsoleColor.DarkCyan;
-			Console.WriteLine(Environment.NewLine); 
+			Console.WriteLine(Environment.NewLine);
 			Console.Write("ND#> ");
 			Console.ResetColor();
 		}
@@ -51,7 +48,8 @@ namespace NeoConsole
 		{
 			return string.Concat(Enumerable.Repeat("-", 100));
 		}
-		public static string ListMethods(MethodInfo[] _methods, string _title) {
+		public static string ListMethods(MethodInfo[] _methods, string _title)
+		{
 			StringBuilder _sb = new StringBuilder();
 			_sb.AppendLine(_title);
 			foreach (MethodInfo x in _methods)
@@ -68,7 +66,8 @@ namespace NeoConsole
 			_sb.AppendLine("AYUDA");
 			_sb.AppendLine(Separator());
 			_sb.AppendLine("* Contextos disponibles:");
-			foreach (string s in _CTX.Contexts){
+			foreach (string s in _CTX.Contexts)
+			{
 				string _activo = "";
 				if (s == _CTX.Key) { _activo = " -> ¡Activo!"; }
 				_sb.AppendLine($"   {s} {_activo}");
@@ -143,7 +142,7 @@ namespace NeoConsole
 			_CTX.State.CommandName = segments[0];
 			_CTX.State.Method = _CTX.GetMethodByName(segments[0]);
 			_CTX.State.Arguments = Array.Empty<object>();
-			if (_CTX.State.Method!=null && arguments.Length != 0)
+			if (_CTX.State.Method != null && arguments.Length != 0)
 			{
 				ParameterInfo[] paramInfo = _CTX.State.Method.GetParameters();
 				for (int i = 0; i < paramInfo.Length; i++)

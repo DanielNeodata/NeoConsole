@@ -1,8 +1,4 @@
-﻿using System;
-using System.Diagnostics;
-using System.Text;
-
-namespace NeoConsole
+﻿namespace NeoConsole
 {
 	public class Abstract
 	{

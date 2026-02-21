@@ -4,7 +4,6 @@ using Microsoft.CodeAnalysis.Scripting;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
 
 namespace NeoConsole
@@ -21,7 +20,8 @@ namespace NeoConsole
 				{
 					_CTX.State.ReturnValue = _CTX.State.Method.Invoke(_CTX.Commands, _CTX.State.Arguments);
 				}
-				else {
+				else
+				{
 					if (_CTX.Status != null)
 					{
 						Script scriptActual = _CTX.Status.Script;
@@ -41,7 +41,8 @@ namespace NeoConsole
 							scriptActual = scriptActual.Previous;
 						}
 					}
-					else {
+					else
+					{
 						throw new Exception("Imposible ejecutar el comando solicitado");
 					}
 				}
@@ -73,7 +74,7 @@ namespace NeoConsole
 		{
 			try
 			{
-				if (_CTX.State.ReturnValue!=null && _CTX.State.ReturnValue.ToString().StartsWith("do:"))
+				if (_CTX.State.ReturnValue != null && _CTX.State.ReturnValue.ToString().StartsWith("do:"))
 				{
 					switch (_CTX.State.ReturnValue.ToString().Split(':')[1])
 					{
@@ -100,7 +101,8 @@ namespace NeoConsole
 		{
 			try
 			{
-				if (_CTX.State.ReturnValue != null && (!_CTX.State.ReturnValue.ToString().StartsWith("do:"))) {
+				if (_CTX.State.ReturnValue != null && (!_CTX.State.ReturnValue.ToString().StartsWith("do:")))
+				{
 					Tools.ConsoleReturnValue(_CTX);
 				}
 			}
