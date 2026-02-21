@@ -67,6 +67,18 @@ namespace NeoConsole
 			_sb.AppendLine(Separator());
 			_sb.AppendLine("AYUDA");
 			_sb.AppendLine(Separator());
+			_sb.AppendLine("* Contextos disponibles:");
+			foreach (string s in _CTX.Contexts){
+				string _activo = "";
+				if (s == _CTX.Key) { _activo = " -> ¡Activo!"; }
+				_sb.AppendLine($"   {s} {_activo}");
+			}
+			_sb.AppendLine("");
+
+			_sb.AppendLine("* Prefijos de acción:");
+			foreach (string s in _CTX.Prefixs) { _sb.AppendLine($"   {s}"); }
+			_sb.AppendLine("");
+
 			_sb.AppendLine(ListMethods(_CTX.MethodsAbstract, "* Funciones abstractas:"));
 			_sb.AppendLine(ListMethods(_CTX.Methods, "* Funciones definidas:"));
 
@@ -89,7 +101,7 @@ namespace NeoConsole
 				}
 			}
 			_sb.AppendLine(Separator());
-			_sb.AppendLine($"ND# Timestamp: {DateTime.Now.ToString()}");
+			_sb.AppendLine($"ND# Timestamp: {DateTime.Now.ToString()} Contexto activo: {_CTX.Key} - {_CTX.Description}");
 			_sb.AppendLine(Separator());
 
 			return _sb;

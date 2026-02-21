@@ -12,6 +12,7 @@ namespace NeoConsole
 	{
 		/*Propiedades*/
 		public string Key { get; set; }
+		public string Description { get; set; }
 		public string? Input { get; set; }
 		public State State { get; set; }
 		public ScriptOptions Options { get; set; }
@@ -22,9 +23,11 @@ namespace NeoConsole
 		public Abstract Abstract { get; set; }
 		public Type TypeAbstract { get; set; }
 		public MethodInfo[] MethodsAbstract { get; set; }
+		public string[] Contexts { get; set; }
+		public string[] Prefixs { get; set; }
 
 		/*Constructor*/
-		public Context(string _key, object _class)
+		public Context(string _key, string _class, string description)
 		{
 			Key = _key;
 			Type = Type.GetType(_class.ToString());
@@ -34,6 +37,7 @@ namespace NeoConsole
 			Abstract = new Abstract();
 			TypeAbstract = Type.GetType(Abstract.ToString());
 			MethodsAbstract = TypeAbstract.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+			Description = description;
 		}
 
 		/*Métodos*/
