@@ -26,8 +26,10 @@ namespace NeoConsole
 					string _preCommand = "[run]";
 					if (_CTX.Input.ToLower().StartsWith(_preCommand))
 					{
+						/*Quita el prefijo*/
 						_CTX.Input = _CTX.Input.Substring(_preCommand.Length);
-						/*Mecanismo para agregar method a la clase instanciada?*/
+						
+						/*Ejecucion de comando no definido en Abstract, _CTX, ni en los scripts del State del _CTX */
 						await Interpreter.RunAsync(_CTX);
 					}
 					else
