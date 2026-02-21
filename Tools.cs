@@ -13,9 +13,6 @@ namespace NeoConsole
 {
 	public static class Tools
 	{
-		public static string Separator() {
-			return string.Concat(Enumerable.Repeat("-", 100));
-		}
 		public static void ConsoleClear()
 		{
 			Console.Clear();
@@ -35,11 +32,25 @@ namespace NeoConsole
 			if (!string.IsNullOrWhiteSpace(_data)) { Console.WriteLine(_data); }
 			Console.ResetColor();
 		}
+		public static void ConsoleReturnValue(Context _CTX)
+		{
+			ConsoleWrite(_CTX, Separator(), true, null);
+			ConsoleWrite(_CTX, $"RESPUESTA", false, null);
+			ConsoleWrite(_CTX, Separator(), false, null);
+			ConsoleWrite(_CTX, $"{_CTX.State.ReturnValue}", false, ConsoleColor.Cyan);
+			ConsoleWrite(_CTX, Separator(), false, null);
+			ConsoleWrite(_CTX, $"ND# Timestamp: {DateTime.Now.ToString()}", false, null);
+			ConsoleWrite(_CTX, Separator(), false, null);
+		}
 		public static void ConsoleError(Context _CTX, Exception ex)
 		{
 			ConsoleWrite(_CTX, $"[Error]: {ex.Message}", true, ConsoleColor.Red);
 		}
 
+		public static string Separator()
+		{
+			return string.Concat(Enumerable.Repeat("-", 100));
+		}
 		public static string ListMethods(MethodInfo[] _methods, string _title) {
 			StringBuilder _sb = new StringBuilder();
 			_sb.AppendLine(_title);
@@ -50,12 +61,11 @@ namespace NeoConsole
 			}
 			return _sb.ToString();
 		}
-
 		public static StringBuilder Help(Context _CTX)
 		{
 			StringBuilder _sb = new StringBuilder();
 			_sb.AppendLine(Separator());
-			_sb.AppendLine("COMANDOS DISPONIBLES");
+			_sb.AppendLine("AYUDA");
 			_sb.AppendLine(Separator());
 			_sb.AppendLine(ListMethods(_CTX.MethodsAbstract, "* Funciones abstractas:"));
 			_sb.AppendLine(ListMethods(_CTX.Methods, "* Funciones definidas:"));
@@ -84,7 +94,6 @@ namespace NeoConsole
 
 			return _sb;
 		}
-
 		public static object ConvertStringToParameterType(string value, ParameterInfo parameterInfo)
 		{
 			Type targetType = parameterInfo.ParameterType;

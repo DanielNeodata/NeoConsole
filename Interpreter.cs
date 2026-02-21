@@ -1,5 +1,9 @@
-﻿using Microsoft.CodeAnalysis.CSharp.Scripting;
+﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Scripting;
+using Microsoft.CodeAnalysis.Scripting;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 
@@ -16,8 +20,26 @@ namespace NeoConsole
 				if (_CTX.State.Method != null)
 				{
 					_CTX.State.ReturnValue = _CTX.State.Method.Invoke(_CTX.Commands, _CTX.State.Arguments);
-					await Response(_CTX);
 				}
+				else {
+					Script scriptActual = _CTX.Status.Script;
+					while (scriptActual != null)
+					{
+						Compilation compilation = scriptActual.GetCompilation();
+						IEnumerable<ISymbol> symbols = compilation.GetSymbolsWithName(s => true, SymbolFilter.Member).OfType<IMethodSymbol>().Where(m => !m.IsImplicitlyDeclared && m.MethodKind == MethodKind.Ordinary);
+						foreach (ISymbol s in symbols)
+						{
+							if (s.Name == _CTX.State.CommandName) {
+								_CTX.Status = await _CTX.Status.ContinueWithAsync(_CTX.State.CodeVerified.ToString());
+								_CTX.State.ReturnValue = _CTX.Status.ReturnValue;
+								break;
+							}
+						}
+						scriptActual = scriptActual.Previous;
+					}
+
+				}
+				await Response(_CTX);
 			}
 			catch (Exception ex)
 			{
@@ -73,7 +95,7 @@ namespace NeoConsole
 			try
 			{
 				if (_CTX.State.ReturnValue != null && (!_CTX.State.ReturnValue.ToString().StartsWith("do:"))) {
-					Tools.ConsoleWrite(_CTX, $"=> {_CTX.State.ReturnValue}", false, ConsoleColor.Green);
+					Tools.ConsoleReturnValue(_CTX);
 				}
 			}
 			catch (Exception ex)
