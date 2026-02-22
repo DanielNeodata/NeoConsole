@@ -1,7 +1,8 @@
-﻿using System;
+﻿using Microsoft.Extensions.Configuration;
+using NeoConsole.Classes;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Security.Cryptography;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace NeoConsole
@@ -13,44 +14,27 @@ namespace NeoConsole
 		internal static Dictionary<string, Info> infoPrefixs = new Dictionary<string, Info>();
 		internal static Dictionary<string, Info> infoContexts = new Dictionary<string, Info>();
 		internal static Context _CTX = null;
+		internal static IConfiguration config = null;
+		internal static string _preContext = "[ctx]";
+		internal static string _preCommand = "[run]";
 
 		static async Task Main(string[] args)
 		{
-			/*-----------------------------------------------------------------------------*/
-			/*Definición de info de prefijos de ejecución y contextos para mostrar en ayuda*/
-			/*-----------------------------------------------------------------------------*/
-			infoPrefixs.Add("context", new Info() { Type = "command", Key = "[ctx]", Description = "Cambiar el contexto", Example = "[ctx]Contexto" });
-			infoPrefixs.Add("run", new Info() { Type = "command", Key = "[run]", Description = "Crear funciones en el contexto activo", Example = "[run]int fncname(string a, int b)" });
+			/*Llamada a inicialización de la consola*/
+			await Initialize();
 
-			infoContexts.Add("Benchmark", new Info() { Type = "context", Key = "Benchmark", Description = "Pruebas de performance", ClassName = "NeoConsole.Benchmark" });
-			infoContexts.Add("Test", new Info() { Type = "context", Key = "Test", Description = "Funciones de testeo", ClassName = "NeoConsole.Test" });
-			/*-----------------------------------------------------------------------------*/
-
-			/*-----------------------------------------------------------------------------*/
-			/*Carga de los contextos disponibles*/
-			/*-----------------------------------------------------------------------------*/
-			foreach (KeyValuePair<string, Info> entry in infoContexts)
-			{
-				_ALL.Add(entry.Value.Key, new Context(entry.Value.Key, entry.Value.ClassName, entry.Value.Description, infoPrefixs, infoContexts));
-			}
-			/*-----------------------------------------------------------------------------*/
-
-			/*Contexto por default*/
-			_CTX = _ALL["Test"];
-
-			/*Muestra ayuda por default*/
-			Tools.ConsoleWrite(_CTX, Tools.Help(_CTX).ToString(), true, null);
-
-			/*Muestra prompt por default*/
-			Tools.ConsolePrompt(_CTX);
-
+			/*Loop mientras la consola está activa*/
 			while (true)
 			{
-				string _preContext = "[ctx]";
+				/*Lee el input del usuario*/
 				string _input = Console.ReadLine();
+
+				/*Evalúa si el input empieza con preContext*/
 				if (_input.ToLower().StartsWith(_preContext))
 				{
+					/*Quita el prefijo*/
 					_input = _input.Substring(_preContext.Length);
+
 					if (_ALL.ContainsKey(_input))
 					{
 						/*Cambio de contexto según envío del usuario*/
@@ -68,10 +52,13 @@ namespace NeoConsole
 				}
 				else
 				{
+					/*Asigna input del usuario al contexto activo*/
 					_CTX.Input = _input;
+
+					/*Evalúa si nos e ha enviado ningún input significativo*/
 					if (!string.IsNullOrWhiteSpace(_CTX.Input))
 					{
-						string _preCommand = "[run]";
+						/*Evalúa si el input empieza con preCommand*/
 						if (_CTX.Input.ToLower().StartsWith(_preCommand))
 						{
 							/*Quita el prefijo*/
@@ -96,6 +83,43 @@ namespace NeoConsole
 					}
 				}
 			}
+		}
+		static async Task Initialize()
+		{
+			/*Lectura de la configuración externa */
+			config = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory()).AddJsonFile("appsettings.json", optional: false, reloadOnChange: true).Build();
+
+			/*-----------------------------------------------------------------------------*/
+			/*Definición de info de prefijos de ejecución y contextos para mostrar en ayuda*/
+			/*-----------------------------------------------------------------------------*/
+			IConfigurationSection _cfgContexts = config.GetSection("Contexts");
+			foreach (IConfigurationSection s in _cfgContexts.GetChildren())
+			{
+				string[] _item = s.Value.Split('|');
+				infoContexts.Add(s.Key, new Info() { Type = "context", Key = _item[0], Description = _item[1], ClassName = _item[2] });
+			}
+
+			infoPrefixs.Add("context", new Info() { Type = "command", Key = "[ctx]", Description = "Cambiar el contexto", Example = "[ctx]Contexto" });
+			infoPrefixs.Add("run", new Info() { Type = "command", Key = "[run]", Description = "Crear funciones en el contexto activo", Example = "[run]int fncname(string a, int b)" });
+			/*-----------------------------------------------------------------------------*/
+
+			/*-----------------------------------------------------------------------------*/
+			/*Carga de los contextos disponibles*/
+			/*-----------------------------------------------------------------------------*/
+			foreach (KeyValuePair<string, Info> entry in infoContexts)
+			{
+				_ALL.Add(entry.Value.Key, new Context(entry.Value.Key, entry.Value.ClassName, entry.Value.Description, infoPrefixs, infoContexts));
+			}
+			/*-----------------------------------------------------------------------------*/
+
+			/*Contexto por default*/
+			_CTX = _ALL["Test"];
+
+			/*Muestra ayuda por default*/
+			Tools.ConsoleWrite(_CTX, Tools.Help(_CTX).ToString(), true, null);
+
+			/*Muestra prompt por default*/
+			Tools.ConsolePrompt(_CTX);
 		}
 	}
 }
