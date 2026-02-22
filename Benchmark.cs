@@ -8,6 +8,8 @@ namespace NeoConsole
 	{
 		Stopwatch sw = new Stopwatch();
 		string msg = "";
+
+		[CustomDescription("Test con +=")]
 		public string fPlus(int totalRegistros)
 		{
 			string resultado = "";
@@ -27,6 +29,7 @@ namespace NeoConsole
 			sw.Reset();
 			return result;
 		}
+		[CustomDescription("Test con Concat()")]
 		public string fConcat(int totalRegistros)
 		{
 			string resultado = "";
@@ -41,6 +44,7 @@ namespace NeoConsole
 			sw.Reset();
 			return result;
 		}
+		[CustomDescription("Test con StringBuilder")]
 		public string fStringBuilder(int totalRegistros)
 		{
 			StringBuilder sb = new StringBuilder();
@@ -54,6 +58,7 @@ namespace NeoConsole
 			sw.Reset();
 			return result;
 		}
+		[CustomDescription("Test con StringBuilder + Concat()")]
 		public string fStringBuilder_Concat(int totalRegistros)
 		{
 			string msg = "";
@@ -69,6 +74,7 @@ namespace NeoConsole
 			sw.Reset();
 			return result;
 		}
+		[CustomDescription("Test con StringBuilder + Interpolación")]
 		public string fStringBuilder_Interpolacion(int totalRegistros)
 		{
 			string cadena1 = "123456";

@@ -100,10 +100,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Info.cs" />
     <Compile Include="State.cs" />
     <Compile Include="Interpreter.cs" />
     <Compile Include="Abstract.cs" />
     <Compile Include="Benchmark.cs" />
+    <Compile Include="CustomDescriptionAttribute.cs" />
     <Compile Include="Tools.cs" />
     <Compile Include="Test.cs" />
     <Compile Include="Program.cs" />

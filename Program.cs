@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 
 namespace NeoConsole
@@ -9,23 +10,33 @@ namespace NeoConsole
 	internal static class Program
 	{
 		internal static Dictionary<string, Context> _ALL = new Dictionary<string, Context>();
-		internal static string[] _prefixs = Array.Empty<string>();
+		internal static Dictionary<string, Info> infoPrefixs = new Dictionary<string, Info>();
+		internal static Dictionary<string, Info> infoContexts = new Dictionary<string, Info>();
 		internal static Context _CTX = null;
 
 		static async Task Main(string[] args)
 		{
-			/*Carga de los contextos disponibles*/
-			_ALL.Add("Benchmark", new Context("Benchmark", "NeoConsole.Benchmark", "Pruebas de performance"));
-			_ALL.Add("Test", new Context("Test", "NeoConsole.Test", "Funciones de testeo"));
+			/*-----------------------------------------------------------------------------*/
+			/*Definición de info de prefijos de ejecución y contextos para mostrar en ayuda*/
+			/*-----------------------------------------------------------------------------*/
+			infoPrefixs.Add("context", new Info() { Type = "command", Key = "[ctx]", Description = "Cambiar el contexto", Example = "[ctx]Contexto" });
+			infoPrefixs.Add("run", new Info() { Type = "command", Key = "[run]", Description = "Crear funciones en el contexto activo", Example = "[run]int fncname(string a, int b)" });
 
-			/*Definición de prefijos de ejecución*/
-			_prefixs = _prefixs.Append("[ctx] -> Cambiar el contexto.  [ctx]Contexto ").ToArray();
-			_prefixs = _prefixs.Append("[run] -> Crear funciones en el contexto activo. [run]int fncname(string a, int b)").ToArray();
+			infoContexts.Add("Benchmark", new Info() { Type = "context", Key = "Benchmark", Description = "Pruebas de performance", ClassName = "NeoConsole.Benchmark" });
+			infoContexts.Add("Test", new Info() { Type = "context", Key = "Test", Description = "Funciones de testeo", ClassName = "NeoConsole.Test" });
+			/*-----------------------------------------------------------------------------*/
+
+			/*-----------------------------------------------------------------------------*/
+			/*Carga de los contextos disponibles*/
+			/*-----------------------------------------------------------------------------*/
+			foreach (KeyValuePair<string, Info> entry in infoContexts)
+			{
+				_ALL.Add(entry.Value.Key, new Context(entry.Value.Key, entry.Value.ClassName, entry.Value.Description, infoPrefixs, infoContexts));
+			}
+			/*-----------------------------------------------------------------------------*/
 
 			/*Contexto por default*/
 			_CTX = _ALL["Test"];
-			_CTX.Contexts = _ALL.Keys.ToArray();
-			_CTX.Prefixs = _prefixs;
 
 			/*Muestra ayuda por default*/
 			Tools.ConsoleWrite(_CTX, Tools.Help(_CTX).ToString(), true, null);
@@ -44,8 +55,6 @@ namespace NeoConsole
 					{
 						/*Cambio de contexto según envío del usuario*/
 						_CTX = _ALL[_input];
-						_CTX.Contexts = _ALL.Keys.ToArray();
-						_CTX.Prefixs = _prefixs;
 
 						Tools.ConsoleWrite(_CTX, Tools.Help(_CTX).ToString(), true, null);
 						Tools.ConsoleWrite(_CTX, $"Se activó el contexto: {_input}", false, ConsoleColor.Green);

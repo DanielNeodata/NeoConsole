@@ -1,5 +1,6 @@
 ﻿using Microsoft.CodeAnalysis.Scripting;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
@@ -20,11 +21,11 @@ namespace NeoConsole
 		public Abstract Abstract { get; set; }
 		public Type TypeAbstract { get; set; }
 		public MethodInfo[] MethodsAbstract { get; set; }
-		public string[] Contexts { get; set; }
-		public string[] Prefixs { get; set; }
+		public Dictionary<string, Info> Prefixs { get; set; }
+		public Dictionary<string, Info> Contexts { get; set; }
 
 		/*Constructor*/
-		public Context(string _key, string _class, string description)
+		public Context(string _key, string _class, string _description, Dictionary<string, Info> _prefixs, Dictionary<string, Info> _contexts)
 		{
 			Key = _key;
 			Type = Type.GetType(_class.ToString());
@@ -34,7 +35,9 @@ namespace NeoConsole
 			Abstract = new Abstract();
 			TypeAbstract = Type.GetType(Abstract.ToString());
 			MethodsAbstract = TypeAbstract.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
-			Description = description;
+			Description = _description;
+			Prefixs = _prefixs;
+			Contexts = _contexts;
 		}
 
 		/*Métodos*/

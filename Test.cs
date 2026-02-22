@@ -4,6 +4,7 @@ namespace NeoConsole
 {
 	public class Test : Abstract
 	{
+		[CustomDescription("Test de armado de Json")]
 		public string fBuildJson()
 		{
 			string Documento = "17634250";

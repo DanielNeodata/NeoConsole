@@ -55,7 +55,10 @@ namespace NeoConsole
 			foreach (MethodInfo x in _methods)
 			{
 				string paramsStr = string.Join(", ", x.GetParameters().Select(p => $"{p.ParameterType.Name.ToLower()} {p.Name}"));
-				_sb.AppendLine($"   {x.Name}({string.Join(", ", paramsStr)})");
+				CustomDescriptionAttribute attribute = (CustomDescriptionAttribute)Attribute.GetCustomAttribute(x, typeof(CustomDescriptionAttribute));
+				string paramCustom = "";
+				if (attribute != null) { paramCustom = $"-> ({attribute.Description})"; }
+				_sb.AppendLine($"   {x.Name}({string.Join(", ", paramsStr)}) {paramCustom}");
 			}
 			return _sb.ToString();
 		}
@@ -65,17 +68,13 @@ namespace NeoConsole
 			_sb.AppendLine(Separator());
 			_sb.AppendLine("AYUDA");
 			_sb.AppendLine(Separator());
-			_sb.AppendLine("* Contextos disponibles:");
-			foreach (string s in _CTX.Contexts)
-			{
-				string _activo = "";
-				if (s == _CTX.Key) { _activo = " -> ¡Activo!"; }
-				_sb.AppendLine($"   {s} {_activo}");
-			}
-			_sb.AppendLine("");
 
 			_sb.AppendLine("* Prefijos de acción:");
-			foreach (string s in _CTX.Prefixs) { _sb.AppendLine($"   {s}"); }
+			foreach (KeyValuePair<string, Info> entry in _CTX.Prefixs) { _sb.AppendLine($"   {entry.Value.Key} -> ({entry.Value.Description})"); }
+			_sb.AppendLine("");
+
+			_sb.AppendLine("* Contextos disponibles:");
+			foreach (KeyValuePair<string, Info> entry in _CTX.Contexts) { _sb.AppendLine($"   {entry.Value.Key} -> ({entry.Value.Description})"); }
 			_sb.AppendLine("");
 
 			_sb.AppendLine(ListMethods(_CTX.MethodsAbstract, "* Funciones abstractas:"));
@@ -100,7 +99,7 @@ namespace NeoConsole
 				}
 			}
 			_sb.AppendLine(Separator());
-			_sb.AppendLine($"ND# Timestamp: {DateTime.Now.ToString()} Contexto activo: {_CTX.Key} - {_CTX.Description}");
+			_sb.AppendLine($"ND# Timestamp: {DateTime.Now.ToString()} Contexto activo: {_CTX.Key}");
 			_sb.AppendLine(Separator());
 
 			return _sb;
