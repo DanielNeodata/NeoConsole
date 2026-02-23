@@ -68,32 +68,6 @@ namespace NeoConsole.Classes
 				Tools.ConsoleError(_CTX, ex);
 			}
 		}
-		public static async Task PosProccess(Context _CTX)
-		{
-			try
-			{
-				if (_CTX.State.ReturnValue != null && _CTX.State.ReturnValue.ToString().StartsWith("do:"))
-				{
-					switch (_CTX.State.ReturnValue.ToString().Split(':')[1])
-					{
-						case "clear":
-							Tools.ConsoleClear();
-							break;
-						case "help":
-							Tools.ConsoleWrite(_CTX, Tools.Help(_CTX).ToString(), true, null);
-							break;
-						case "exit":
-							System.Environment.Exit(0);
-							break;
-					}
-				}
-				Tools.ConsolePrompt(_CTX);
-			}
-			catch (Exception ex)
-			{
-				Tools.ConsoleError(_CTX, ex);
-			}
-		}
 		public static async Task Response(Context _CTX)
 		{
 			try
@@ -107,6 +81,50 @@ namespace NeoConsole.Classes
 			{
 				Tools.ConsoleError(_CTX, ex);
 			}
+		}
+
+		public static async Task<string> EvalInput(Context _CTX)
+		{
+			string _preCommand = "";
+			/*Verifica que el input tenga valor significativo*/
+			if (string.IsNullOrWhiteSpace(_CTX.Input)) { throw new Exception("No se ha enviado ningún comando"); }
+
+			/*Evalua sin el input tiene prefijo válido y ejecuta de acuerdo a la lógica provista*/
+			foreach (KeyValuePair<string, Info> entry in _CTX.Prefixs)
+			{
+				if (_CTX.Input.ToLower().StartsWith(entry.Value.Key))
+				{
+					_preCommand = entry.Value.Key;
+					break;
+				}
+			}
+
+			/*Si no hay un prefijo válido, sale para ejecutar el Invoke*/
+			if (_preCommand != "")
+			{
+
+				/*Quita el prefijo*/
+				_CTX.Input = _CTX.Input.Substring(_preCommand.Length);
+
+				/*Selecciona acción de acuerdo al precommand enviado*/
+				switch (_preCommand)
+				{
+					case "[run]":
+						/*Ejecucion de comando no definido en Abstract, _CTX, ni en los scripts del State del _CTX */
+						await Interpreter.RunAsync(_CTX);
+						break;
+					default:
+						_preCommand = "";
+						break;
+				}
+			}
+			if (_preCommand == "")
+			{
+				Tools.ConsoleWrite(_CTX, "El prefijo de acción enviado, no tiene funcionalidad definida", true, ConsoleColor.Yellow);
+				Tools.ConsolePrompt(_CTX);
+			}
+
+			return _preCommand;
 		}
 	}
 }

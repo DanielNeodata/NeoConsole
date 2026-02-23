@@ -4,6 +4,11 @@ namespace NeoConsole.BaseClasses
 {
 	public class Abstract
 	{
+		[CustomDescription("Cambia el contexto")]
+		public string Change(string _context)
+		{
+			return $"do:change:{_context}";
+		}
 		[CustomDescription("Limpia la pantalla")]
 		public string Clear()
 		{

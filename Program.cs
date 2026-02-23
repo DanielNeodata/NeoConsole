@@ -11,12 +11,11 @@ namespace NeoConsole
 	internal static class Program
 	{
 		internal static Dictionary<string, Context> _ALL = new Dictionary<string, Context>();
-		internal static Dictionary<string, Info> infoPrefixs = new Dictionary<string, Info>();
+		internal static Dictionary<string, Info> infoSyntax = new Dictionary<string, Info>();
 		internal static Dictionary<string, Info> infoContexts = new Dictionary<string, Info>();
 		internal static Context _CTX = null;
 		internal static IConfiguration config = null;
-		internal static string _preContext = "[ctx]";
-		internal static string _preCommand = "[run]";
+		internal static string _Command = "";
 
 		static async Task Main(string[] args)
 		{
@@ -26,64 +25,24 @@ namespace NeoConsole
 			/*Loop mientras la consola está activa*/
 			while (true)
 			{
-				/*Lee el input del usuario*/
-				string _input = Console.ReadLine();
+				/*Asigna input del usuario al contexto activo*/
+				_CTX.Input = Console.ReadLine();
 
-				/*Evalúa si el input empieza con preContext*/
-				if (_input.ToLower().StartsWith(_preContext))
+				/*Evalua si se debe ejecutar lo enviado como parte del un preCommand
+				 * Si el EvalInput() es false, debe ejecutar el Invoke, asumiendo es una funcion definida en el stack
+				 */
+				_Command = await Interpreter.EvalInput(_CTX);
+				if (_Command == "")
 				{
-					/*Quita el prefijo*/
-					_input = _input.Substring(_preContext.Length);
-
-					if (_ALL.ContainsKey(_input))
-					{
-						/*Cambio de contexto según envío del usuario*/
-						_CTX = _ALL[_input];
-
-						Tools.ConsoleWrite(_CTX, Tools.Help(_CTX).ToString(), true, null);
-						Tools.ConsoleWrite(_CTX, $"Se activó el contexto: {_input}", false, ConsoleColor.Green);
-						Tools.ConsolePrompt(_CTX);
-					}
-					else
-					{
-						Tools.ConsoleWrite(_CTX, $"No se existe el contexto {_input}", true, ConsoleColor.Red);
-						Tools.ConsolePrompt(_CTX);
-					}
+					/*Llamada asumiendo se invoca un método definido en la clase del _CTX o uno de los comando de posprocesamiento de Abstract*/
+					await Interpreter.Invoke(_CTX);
 				}
-				else
-				{
-					/*Asigna input del usuario al contexto activo*/
-					_CTX.Input = _input;
 
-					/*Evalúa si nos e ha enviado ningún input significativo*/
-					if (!string.IsNullOrWhiteSpace(_CTX.Input))
-					{
-						/*Evalúa si el input empieza con preCommand*/
-						if (_CTX.Input.ToLower().StartsWith(_preCommand))
-						{
-							/*Quita el prefijo*/
-							_CTX.Input = _CTX.Input.Substring(_preCommand.Length);
-
-							/*Ejecucion de comando no definido en Abstract, _CTX, ni en los scripts del State del _CTX */
-							await Interpreter.RunAsync(_CTX);
-						}
-						else
-						{
-							/*Llamada asumiendo se invoca un método definido en la clase del _CTX o uno de los comando de posprocesamiento de Abstract*/
-							await Interpreter.Invoke(_CTX);
-						}
-
-						/*Posprocesamiento de valores de respuesta*/
-						await Interpreter.PosProccess(_CTX);
-					}
-					else
-					{
-						Tools.ConsoleWrite(_CTX, "No se ha enviado ningún comando", true, ConsoleColor.Yellow);
-						Tools.ConsolePrompt(_CTX);
-					}
-				}
+				/*Posprocesamiento de valores de respuesta*/
+				await PosProccess();
 			}
 		}
+		
 		static async Task Initialize()
 		{
 			/*Lectura de la configuración externa */
@@ -99,8 +58,8 @@ namespace NeoConsole
 				infoContexts.Add(s.Key, new Info() { Type = "context", Key = _item[0], Description = _item[1], ClassName = _item[2] });
 			}
 
-			infoPrefixs.Add("context", new Info() { Type = "command", Key = "[ctx]", Description = "Cambiar el contexto", Example = "[ctx]Contexto" });
-			infoPrefixs.Add("run", new Info() { Type = "command", Key = "[run]", Description = "Crear funciones en el contexto activo", Example = "[run]int fncname(string a, int b)" });
+			/*Carga de elementos sintácticos*/
+			infoSyntax.Add("run", new Info() { Type = "command", Key = "[run]", Description = "Crear funciones en el contexto activo", Example = "[run]int fncname(string a, int b)" });
 			/*-----------------------------------------------------------------------------*/
 
 			/*-----------------------------------------------------------------------------*/
@@ -108,7 +67,7 @@ namespace NeoConsole
 			/*-----------------------------------------------------------------------------*/
 			foreach (KeyValuePair<string, Info> entry in infoContexts)
 			{
-				_ALL.Add(entry.Value.Key, new Context(entry.Value.Key, entry.Value.ClassName, entry.Value.Description, infoPrefixs, infoContexts));
+				_ALL.Add(entry.Value.Key, new Context(entry.Value.Key, entry.Value.ClassName, entry.Value.Description, infoSyntax, infoContexts));
 			}
 			/*-----------------------------------------------------------------------------*/
 
@@ -121,5 +80,47 @@ namespace NeoConsole
 			/*Muestra prompt por default*/
 			Tools.ConsolePrompt(_CTX);
 		}
+
+		public static async Task PosProccess()
+		{
+			try
+			{
+				if (_CTX.State!=null && _CTX.State.ReturnValue != null && _CTX.State.ReturnValue.ToString().StartsWith("do:"))
+				{
+					string[] _vals = _CTX.State.ReturnValue.ToString().Split(':');
+					switch (_vals[1])
+					{
+						case "change":
+							string _context = _vals[2].Replace("\"", "");
+							if (_ALL.ContainsKey(_context) )
+							{
+								_CTX = _ALL[_context];
+								Tools.ConsoleWrite(_CTX, Tools.Help(_CTX).ToString(), true, null);
+								Tools.ConsoleWrite(_CTX, $"Se activó el contexto: {_context}", false, ConsoleColor.Green);
+							}
+							else
+							{
+								Tools.ConsoleWrite(_CTX, $"No se existe el contexto {_context}", true, ConsoleColor.Red);
+							}
+							break;
+						case "clear":
+							Tools.ConsoleClear();
+							break;
+						case "help":
+							Tools.ConsoleWrite(_CTX, Tools.Help(_CTX).ToString(), true, null);
+							break;
+						case "exit":
+							System.Environment.Exit(0);
+							break;
+					}
+				}
+				Tools.ConsolePrompt(_CTX);
+			}
+			catch (Exception ex)
+			{
+				Tools.ConsoleError(_CTX, ex);
+			}
+		}
+
 	}
 }
