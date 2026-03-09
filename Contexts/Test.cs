@@ -1,6 +1,19 @@
 ﻿using NeoConsole.BaseClasses;
 using NeoConsole.Classes;
+using Org.BouncyCastle.Bcpg.OpenPgp;
+using Org.BouncyCastle.Crypto;
+using Org.BouncyCastle.Crypto.Encodings;
+using Org.BouncyCastle.Crypto.Engines;
+using Org.BouncyCastle.Crypto.Parameters;
+using Org.BouncyCastle.OpenSsl;
+using Org.BouncyCastle.Security;
+using System;
+using System.IO;
+using System.Security.Cryptography;
+using System.Security.Cryptography;
 using System.Text;
+using System.Xml;
+
 
 namespace NeoConsole.Contexts
 {
