@@ -120,7 +120,8 @@ namespace NeoConsole.Classes
 			}
 			if (_preCommand == "")
 			{
-				Tools.ConsoleWrite(_CTX, "El prefijo de acción enviado, no tiene funcionalidad definida", true, ConsoleColor.Yellow);
+                // Quizá aquí se podría agregar para ejecutar comandos en el entorno definido (no funciones)
+                Tools.ConsoleWrite(_CTX, "El prefijo de acción enviado, no tiene funcionalidad definida", true, ConsoleColor.Yellow);
 				Tools.ConsolePrompt(_CTX);
 			}
 
