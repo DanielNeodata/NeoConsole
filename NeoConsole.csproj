@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-<<<<<<< HEAD
   <Import Project="packages\MethodBoundaryAspect.Fody.2.0.150\build\MethodBoundaryAspect.Fody.props" Condition="Exists('packages\MethodBoundaryAspect.Fody.2.0.150\build\MethodBoundaryAspect.Fody.props')" />
   <Import Project="packages\Microsoft.ML.Recommender.0.23.0\build\netstandard2.0\Microsoft.ML.Recommender.props" Condition="Exists('packages\Microsoft.ML.Recommender.0.23.0\build\netstandard2.0\Microsoft.ML.Recommender.props')" />
   <Import Project="packages\Microsoft.ML.DnnImageFeaturizer.ResNet50.0.23.0\build\netstandard2.0\Microsoft.ML.DnnImageFeaturizer.ResNet50.props" Condition="Exists('packages\Microsoft.ML.DnnImageFeaturizer.ResNet50.0.23.0\build\netstandard2.0\Microsoft.ML.DnnImageFeaturizer.ResNet50.props')" />
@@ -11,8 +10,6 @@
   <Import Project="packages\Microsoft.ML.FastTree.5.0.0\build\netstandard2.0\Microsoft.ML.FastTree.props" Condition="Exists('packages\Microsoft.ML.FastTree.5.0.0\build\netstandard2.0\Microsoft.ML.FastTree.props')" />
   <Import Project="packages\Microsoft.ML.Mkl.Redist.5.0.0\build\netstandard2.0\Microsoft.ML.Mkl.Redist.props" Condition="Exists('packages\Microsoft.ML.Mkl.Redist.5.0.0\build\netstandard2.0\Microsoft.ML.Mkl.Redist.props')" />
   <Import Project="packages\LightGBM.4.6.0\build\LightGBM.props" Condition="Exists('packages\LightGBM.4.6.0\build\LightGBM.props')" />
-=======
->>>>>>> 5fb6083ac682f9b6b3c7274e47e6f9989a210d36
   <Import Project="packages\Microsoft.ML.5.0.0\build\netstandard2.0\Microsoft.ML.props" Condition="Exists('packages\Microsoft.ML.5.0.0\build\netstandard2.0\Microsoft.ML.props')" />
   <Import Project="packages\Microsoft.ML.CpuMath.5.0.0\build\netstandard2.0\Microsoft.ML.CpuMath.props" Condition="Exists('packages\Microsoft.ML.CpuMath.5.0.0\build\netstandard2.0\Microsoft.ML.CpuMath.props')" />
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
@@ -73,7 +70,6 @@
     <Reference Include="BouncyCastle.Crypto, Version=1.9.0.0, Culture=neutral, PublicKeyToken=0e99375e54769942, processorArchitecture=MSIL">
       <HintPath>packages\Portable.BouncyCastle.1.9.0\lib\net40\BouncyCastle.Crypto.dll</HintPath>
     </Reference>
-<<<<<<< HEAD
     <Reference Include="Google.Protobuf, Version=3.34.1.0, Culture=neutral, PublicKeyToken=a7d26565bac4d604, processorArchitecture=MSIL">
       <HintPath>packages\Google.Protobuf.3.34.1\lib\net45\Google.Protobuf.dll</HintPath>
     </Reference>
@@ -134,59 +130,15 @@
     <Reference Include="Microsoft.Extensions.FileProviders.Physical, Version=10.0.0.5, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
       <HintPath>packages\Microsoft.Extensions.FileProviders.Physical.10.0.5\lib\net462\Microsoft.Extensions.FileProviders.Physical.dll</HintPath>
     </Reference>
-=======
-    <Reference Include="Microsoft.Bcl.AsyncInterfaces, Version=10.0.0.5, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>packages\Microsoft.Bcl.AsyncInterfaces.10.0.5\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Bcl.Numerics, Version=10.0.0.5, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>packages\Microsoft.Bcl.Numerics.10.0.5\lib\net462\Microsoft.Bcl.Numerics.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.CodeAnalysis, Version=5.3.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>packages\Microsoft.CodeAnalysis.Common.5.3.0\lib\netstandard2.0\Microsoft.CodeAnalysis.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.CodeAnalysis.CSharp, Version=5.3.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>packages\Microsoft.CodeAnalysis.CSharp.5.3.0\lib\netstandard2.0\Microsoft.CodeAnalysis.CSharp.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.CodeAnalysis.CSharp.Scripting, Version=5.3.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>packages\Microsoft.CodeAnalysis.CSharp.Scripting.5.3.0\lib\netstandard2.0\Microsoft.CodeAnalysis.CSharp.Scripting.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.CodeAnalysis.Scripting, Version=5.3.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>packages\Microsoft.CodeAnalysis.Scripting.Common.5.3.0\lib\netstandard2.0\Microsoft.CodeAnalysis.Scripting.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Extensions.Configuration, Version=10.0.0.5, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
-      <HintPath>packages\Microsoft.Extensions.Configuration.10.0.5\lib\net462\Microsoft.Extensions.Configuration.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Extensions.Configuration.Abstractions, Version=10.0.0.5, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
-      <HintPath>packages\Microsoft.Extensions.Configuration.Abstractions.10.0.5\lib\net462\Microsoft.Extensions.Configuration.Abstractions.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Extensions.Configuration.Binder, Version=10.0.0.5, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
-      <HintPath>packages\Microsoft.Extensions.Configuration.Binder.10.0.5\lib\net462\Microsoft.Extensions.Configuration.Binder.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Extensions.Configuration.FileExtensions, Version=10.0.0.5, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
-      <HintPath>packages\Microsoft.Extensions.Configuration.FileExtensions.10.0.5\lib\net462\Microsoft.Extensions.Configuration.FileExtensions.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Extensions.Configuration.Json, Version=10.0.0.5, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
-      <HintPath>packages\Microsoft.Extensions.Configuration.Json.10.0.5\lib\net462\Microsoft.Extensions.Configuration.Json.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Extensions.FileProviders.Abstractions, Version=10.0.0.5, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
-      <HintPath>packages\Microsoft.Extensions.FileProviders.Abstractions.10.0.5\lib\net462\Microsoft.Extensions.FileProviders.Abstractions.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Extensions.FileProviders.Physical, Version=10.0.0.5, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
-      <HintPath>packages\Microsoft.Extensions.FileProviders.Physical.10.0.5\lib\net462\Microsoft.Extensions.FileProviders.Physical.dll</HintPath>
-    </Reference>
->>>>>>> 5fb6083ac682f9b6b3c7274e47e6f9989a210d36
     <Reference Include="Microsoft.Extensions.FileSystemGlobbing, Version=10.0.0.5, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
       <HintPath>packages\Microsoft.Extensions.FileSystemGlobbing.10.0.5\lib\net462\Microsoft.Extensions.FileSystemGlobbing.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Extensions.Primitives, Version=10.0.0.5, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
       <HintPath>packages\Microsoft.Extensions.Primitives.10.0.5\lib\net462\Microsoft.Extensions.Primitives.dll</HintPath>
     </Reference>
-<<<<<<< HEAD
     <Reference Include="Microsoft.ML.AutoML, Version=1.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>packages\Microsoft.ML.AutoML.0.23.0\lib\netstandard2.0\Microsoft.ML.AutoML.dll</HintPath>
     </Reference>
-=======
->>>>>>> 5fb6083ac682f9b6b3c7274e47e6f9989a210d36
     <Reference Include="Microsoft.ML.Core, Version=1.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>packages\Microsoft.ML.5.0.0\lib\netstandard2.0\Microsoft.ML.Core.dll</HintPath>
     </Reference>
@@ -199,7 +151,6 @@
     <Reference Include="Microsoft.ML.DataView, Version=1.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>packages\Microsoft.ML.DataView.5.0.0\lib\netstandard2.0\Microsoft.ML.DataView.dll</HintPath>
     </Reference>
-<<<<<<< HEAD
     <Reference Include="Microsoft.ML.DnnImageFeaturizer.AlexNet, Version=1.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>packages\Microsoft.ML.DnnImageFeaturizer.AlexNet.0.23.0\lib\netstandard2.0\Microsoft.ML.DnnImageFeaturizer.AlexNet.dll</HintPath>
     </Reference>
@@ -283,22 +234,6 @@
     </Reference>
     <Reference Include="SkiaSharp, Version=3.119.0.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
       <HintPath>packages\SkiaSharp.3.119.2\lib\net462\SkiaSharp.dll</HintPath>
-=======
-    <Reference Include="Microsoft.ML.KMeansClustering, Version=1.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>packages\Microsoft.ML.5.0.0\lib\netstandard2.0\Microsoft.ML.KMeansClustering.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.ML.PCA, Version=1.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>packages\Microsoft.ML.5.0.0\lib\netstandard2.0\Microsoft.ML.PCA.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.ML.StandardTrainers, Version=1.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>packages\Microsoft.ML.5.0.0\lib\netstandard2.0\Microsoft.ML.StandardTrainers.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.ML.Transforms, Version=1.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>packages\Microsoft.ML.5.0.0\lib\netstandard2.0\Microsoft.ML.Transforms.dll</HintPath>
-    </Reference>
-    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>packages\Newtonsoft.Json.13.0.4\lib\net45\Newtonsoft.Json.dll</HintPath>
->>>>>>> 5fb6083ac682f9b6b3c7274e47e6f9989a210d36
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Buffers, Version=4.0.5.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
@@ -311,15 +246,12 @@
       <HintPath>packages\System.Collections.Immutable.10.0.5\lib\net462\System.Collections.Immutable.dll</HintPath>
     </Reference>
     <Reference Include="System.Core" />
-<<<<<<< HEAD
     <Reference Include="System.Diagnostics.DiagnosticSource, Version=10.0.0.5, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>packages\System.Diagnostics.DiagnosticSource.10.0.5\lib\net462\System.Diagnostics.DiagnosticSource.dll</HintPath>
     </Reference>
     <Reference Include="System.IO.FileSystem.AccessControl, Version=5.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>packages\System.IO.FileSystem.AccessControl.5.0.0\lib\net461\System.IO.FileSystem.AccessControl.dll</HintPath>
     </Reference>
-=======
->>>>>>> 5fb6083ac682f9b6b3c7274e47e6f9989a210d36
     <Reference Include="System.IO.Pipelines, Version=10.0.0.5, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>packages\System.IO.Pipelines.10.0.5\lib\net462\System.IO.Pipelines.dll</HintPath>
     </Reference>
@@ -339,7 +271,6 @@
     <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=6.0.3.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>packages\System.Runtime.CompilerServices.Unsafe.6.1.2\lib\net462\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
     </Reference>
-<<<<<<< HEAD
     <Reference Include="System.Security.AccessControl, Version=6.0.0.1, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>packages\System.Security.AccessControl.6.0.1\lib\net461\System.Security.AccessControl.dll</HintPath>
     </Reference>
@@ -352,14 +283,6 @@
     <Reference Include="System.Text.Encodings.Web, Version=10.0.0.5, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>packages\System.Text.Encodings.Web.10.0.5\lib\net462\System.Text.Encodings.Web.dll</HintPath>
     </Reference>
-=======
-    <Reference Include="System.Text.Encoding.CodePages, Version=10.0.0.5, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>packages\System.Text.Encoding.CodePages.10.0.5\lib\net462\System.Text.Encoding.CodePages.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Text.Encodings.Web, Version=10.0.0.5, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>packages\System.Text.Encodings.Web.10.0.5\lib\net462\System.Text.Encodings.Web.dll</HintPath>
-    </Reference>
->>>>>>> 5fb6083ac682f9b6b3c7274e47e6f9989a210d36
     <Reference Include="System.Text.Json, Version=10.0.0.5, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>packages\System.Text.Json.10.0.5\lib\net462\System.Text.Json.dll</HintPath>
     </Reference>
@@ -432,7 +355,6 @@
     <Error Condition="!Exists('packages\Microsoft.ML.CpuMath.5.0.0\build\netstandard2.0\Microsoft.ML.CpuMath.props')" Text="$([System.String]::Format('$(ErrorText)', 'packages\Microsoft.ML.CpuMath.5.0.0\build\netstandard2.0\Microsoft.ML.CpuMath.props'))" />
     <Error Condition="!Exists('packages\Microsoft.ML.5.0.0\build\netstandard2.0\Microsoft.ML.props')" Text="$([System.String]::Format('$(ErrorText)', 'packages\Microsoft.ML.5.0.0\build\netstandard2.0\Microsoft.ML.props'))" />
     <Error Condition="!Exists('packages\Microsoft.ML.5.0.0\build\netstandard2.0\Microsoft.ML.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\Microsoft.ML.5.0.0\build\netstandard2.0\Microsoft.ML.targets'))" />
-<<<<<<< HEAD
     <Error Condition="!Exists('packages\LightGBM.4.6.0\build\LightGBM.props')" Text="$([System.String]::Format('$(ErrorText)', 'packages\LightGBM.4.6.0\build\LightGBM.props'))" />
     <Error Condition="!Exists('packages\LightGBM.4.6.0\build\LightGBM.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\LightGBM.4.6.0\build\LightGBM.targets'))" />
     <Error Condition="!Exists('packages\Microsoft.ML.Mkl.Redist.5.0.0\build\netstandard2.0\Microsoft.ML.Mkl.Redist.props')" Text="$([System.String]::Format('$(ErrorText)', 'packages\Microsoft.ML.Mkl.Redist.5.0.0\build\netstandard2.0\Microsoft.ML.Mkl.Redist.props'))" />
@@ -459,8 +381,4 @@
   <Import Project="packages\SkiaSharp.NativeAssets.Win32.3.119.2\build\net462\SkiaSharp.NativeAssets.Win32.targets" Condition="Exists('packages\SkiaSharp.NativeAssets.Win32.3.119.2\build\net462\SkiaSharp.NativeAssets.Win32.targets')" />
   <Import Project="packages\Microsoft.ML.OnnxRuntime.Managed.1.24.4\build\netstandard2.0\Microsoft.ML.OnnxRuntime.Managed.targets" Condition="Exists('packages\Microsoft.ML.OnnxRuntime.Managed.1.24.4\build\netstandard2.0\Microsoft.ML.OnnxRuntime.Managed.targets')" />
   <Import Project="packages\Serilog.4.3.1\build\Serilog.targets" Condition="Exists('packages\Serilog.4.3.1\build\Serilog.targets')" />
-=======
-  </Target>
-  <Import Project="packages\Microsoft.ML.5.0.0\build\netstandard2.0\Microsoft.ML.targets" Condition="Exists('packages\Microsoft.ML.5.0.0\build\netstandard2.0\Microsoft.ML.targets')" />
->>>>>>> 5fb6083ac682f9b6b3c7274e47e6f9989a210d36
 </Project>
