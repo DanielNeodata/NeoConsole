@@ -311,7 +311,6 @@
     <Compile Include="Classes\State.cs" />
     <Compile Include="Classes\Interpreter.cs" />
     <Compile Include="BaseClasses\Abstract.cs" />
-    <Compile Include="Contexts\AIModel.cs" />
     <Compile Include="Contexts\Benchmark.cs" />
     <Compile Include="Classes\CustomDescriptionAttribute.cs" />
     <Compile Include="Classes\Tools.cs" />
@@ -326,7 +325,7 @@
     <None Include="appsettings.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="Datos\datos_pacientes.csv" />
+    <None Include="Datos\universo.csv" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

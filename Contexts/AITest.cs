@@ -50,12 +50,14 @@ namespace NeoConsole.Contexts
     {
 
         [CustomDescription("Prueba del AutoML")]
-        public void AutoModelAI(string QueHace = "Experimenta", string MezclaSN = "Si")
+        public void AutoModelAI(string QueHace = "e", string MezclaSN = "s")
         {
+            QueHace = QueHace.ToLower().Trim();
+            MezclaSN = MezclaSN.ToLower().Trim();
             Console.WriteLine($"Parametros: $1 {QueHace} | $2: {MezclaSN}");
 
             var mlContext = new MLContext();
-            string dataPath = "D:\\Ruben\\www\\neodata.code\\NeoConsole\\universo.csv";
+            string dataPath = "D:\\Ruben\\www\\neodata.code\\NeoConsole\\Datos\\universo.csv";
 
             // 2. Carga desde CSV
             IDataView dataView = mlContext.Data.LoadFromTextFile<QueData>(
@@ -71,7 +73,7 @@ namespace NeoConsole.Contexts
 
             Console.WriteLine($"Datos cargados -> Positivos (Mora): {positivos} | Negativos: {negativos}");
 
-            if (QueHace == "Experimenta")
+            if (QueHace == "e")
             {
 
                 // 2. Configuración del Experimento de AutoML
@@ -92,7 +94,7 @@ namespace NeoConsole.Contexts
 
                 // Ejecutar el experimento
                 ExperimentResult<BinaryClassificationMetrics> result;
-                if (MezclaSN == "Si")
+                if (MezclaSN == "s")
                 {
                     result = experiment.Execute(shuffledData, labelColumnName: "Mora");
                 }
@@ -321,6 +323,8 @@ namespace NeoConsole.Contexts
                 MostrarMetricas(metrics);
 
             }
+            // Borra la funcion para tomar lo enviado como parámetro
+            QueHace = "";
         }
 
         static void MostrarPesosEnConsola(MLContext mlContext, ITransformer model, IDataView data)
