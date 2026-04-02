@@ -469,6 +469,10 @@ namespace NeoConsole.Contexts
                 // 4. Ahora sí, extraemos las importancias (FastTree utiliza Feature Weights)
                 if (actualModel is Microsoft.ML.Trainers.FastTree.FastTreeBinaryModelParameters fastTreeModel)
                 {
+                    Console.WriteLine($"--- Hiperparámetros FastTree ---");
+                    Console.WriteLine($"Número de Árboles: {actualModel.NumberOfTrees}");
+                    Console.WriteLine($"Hojas por Árbol: {actualModel.NumberOfLeaves}");
+
                     VBuffer<float> weights = default;
                     fastTreeModel.GetFeatureWeights(ref weights);
 
@@ -508,16 +512,11 @@ namespace NeoConsole.Contexts
                 }
                 if (actualModel is Microsoft.ML.Trainers.LightGbm.LightGbmBinaryModelParameters)
                 {
-//                    chain = (TransformerChain<ITransformer>)model;
-//                    lastTransformer = chain.Last();
+                    // Acceso a propiedades específicas de LightGBM
+                    Console.WriteLine($"--- Hiperparámetros LightGBM ---");
+                    // Nota: Algunas propiedades son internas, pero las principales están expuestas:
+                    Console.WriteLine($"Número de Árboles: {actualModel.NumberOfTrees}");
 
-                    // 2. Acceder al modelo calibrado usando dynamic para simplificar la jerarquía
-//                    binaryTransformer = lastTransformer;
-//                    calibratedModel = binaryTransformer.Model;
-
-                    // 3. Extraer el submodelo (el motor de LightGBM)
-//                    actualModel = calibratedModel.SubModel;
-                    
                     VBuffer<float> weights = default;
                     actualModel.GetFeatureWeights(ref weights);
                     var values = weights.DenseValues().ToArray();
