@@ -91,6 +91,7 @@ namespace NeoConsole.Contexts
                 // Buscamos maximizar el AUC para que la evaluación sea integral
                 var settings = new BinaryExperimentSettings
                 {
+                    MaxModels = 10,
                     MaxExperimentTimeInSeconds = 600, // 5 minutos de búsqueda intensa
                     OptimizingMetric = BinaryClassificationMetric.AreaUnderRocCurve
                 };
@@ -218,8 +219,7 @@ namespace NeoConsole.Contexts
                 {
                     // CON MORA
                     // True;0,06;0,0022;0,24;0,4571;0,1;0,056;0,4129;0,01;0,2233;0,147;0,0133;0,0015;0,3466;0,0161
-                    // SIN MORA
-                    // False;0,12;0,0846;0,63;0,0118;0,1;0,0752;0,3373;0,35;0,2125;0,147;0,2068;0,0016;0,3466;0,5332
+                    /*
                     Cuotas = 0.06f,
                     Monto = 0.0022f,
                     Edad = 0.24f,
@@ -234,6 +234,23 @@ namespace NeoConsole.Contexts
                     Calificacion = 0.0015f,
                     Nacionalidad = 0.3466f,
                     Localidad = 0.0161f
+                    */
+                    // SIN MORA
+                    // False;0,12;0,0846;0,63;0,0118;0,1;0,0752;0,3373;0,35;0,2125;0,147;0,2068;0,0016;0,3466;0,5332
+                    Cuotas = 0.12f,
+                    Monto = 0.0846f,
+                    Edad = 0.63f,
+                    Ingresos = 0.0118f,
+                    Empresa = 0.1f,
+                    Comerciante = 0.0752f,
+                    Comercio = 0.3373f,
+                    Sucursal = 0.35f,
+                    Plan = 0.2125f,
+                    Sexo = 0.147f,
+                    Ocupacion = 0.2068f,
+                    Calificacion = 0.0016f,
+                    Nacionalidad = 0.3466f,
+                    Localidad = 0.5332f
                 };
 
                 var resultado = predictionEngine.Predict(prueba);
@@ -457,6 +474,8 @@ namespace NeoConsole.Contexts
 
                     var values = weights.DenseValues().ToArray();
 
+                    var total = values.Sum();
+
                     // Aquí ya puedes listar los pesos como antes
                     Console.WriteLine("Pesos de FastTree (dentro del calibrador) extraídos con éxito.");
 
@@ -464,37 +483,67 @@ namespace NeoConsole.Contexts
                     var transformedData = model.Transform(data);
                     var column = transformedData.Schema[featureColumnName];
 
-                    Console.WriteLine($"Columna |   Valor   |   %   ");
-                    var total = values.Sum();
-                    for (int i = 0; i < values.Length; i++)
+                    //var nombres = weights.DenseValues().Select(x => x.ToString()).ToArray();
+                    var nombres = weights.DenseValues().Select((val, index) => $"{index}: {val}").ToArray();
+                    if (topN == 0)
                     {
-                        Console.WriteLine($"{i} | {values[i]} | {values[i]*100/total}%");
+                        topN = nombres.Length;
+                    }
+                    var ranking = nombres.Select((name, index) => new {
+                        Nombre = "Columna: " + index.ToString().PadLeft(3),
+                        Valor = values[index]
+                    })
+                                .OrderByDescending(x => x.Valor)
+                                .Take(topN);
+
+                    Console.WriteLine("Orden Columna | Importancia (Gain) | Peso   ");
+                    Console.WriteLine("--------------------------------------------");
+
+                    foreach (var item in ranking)
+                    {
+                        Console.WriteLine($"{item.Nombre,-13} |       {item.Valor:F4}       | {(item.Valor * 100 / total).ToString().PadLeft(6)}%");
+                        // 'i' representa el orden o índice de la columna en el set de datos procesado
+                        //Console.WriteLine($"{i.ToString().PadRight(5)} | {values[i]} | {values[i]*100/total}%");
                     }
                 }
                 if (actualModel is Microsoft.ML.Trainers.LightGbm.LightGbmBinaryModelParameters)
                 {
-                    chain = (TransformerChain<ITransformer>)model;
-                    lastTransformer = chain.Last();
+//                    chain = (TransformerChain<ITransformer>)model;
+//                    lastTransformer = chain.Last();
 
                     // 2. Acceder al modelo calibrado usando dynamic para simplificar la jerarquía
-                    binaryTransformer = lastTransformer;
-                    calibratedModel = binaryTransformer.Model;
+//                    binaryTransformer = lastTransformer;
+//                    calibratedModel = binaryTransformer.Model;
 
                     // 3. Extraer el submodelo (el motor de LightGBM)
-                    actualModel = calibratedModel.SubModel;
+//                    actualModel = calibratedModel.SubModel;
                     
                     VBuffer<float> weights = default;
                     actualModel.GetFeatureWeights(ref weights);
                     var values = weights.DenseValues().ToArray();
 
                     float total = values.Sum();
-                    Console.WriteLine("Orden Columna | Importancia (Gain) |       %");
-                    Console.WriteLine("-----------------------------------");
 
-                    for (int i = 0; i < values.Length; i++)
+                    var nombres = weights.DenseValues().Select(x => x.ToString()).ToArray();
+                    if (topN == 0)
                     {
+                        topN = nombres.Length;
+                    }
+                    var ranking = nombres.Select((name, index) => new {
+                        Nombre = "Columna: " + index.ToString().PadLeft(3),
+                        Valor = values[index]
+                    })
+                                .OrderByDescending(x => x.Valor)
+                                .Take(topN);
+
+                    Console.WriteLine("Orden Columna | Importancia (Gain) | Peso   ");
+                    Console.WriteLine("--------------------------------------------");
+
+                    foreach (var item in ranking)
+                    {
+                        Console.WriteLine($"{item.Nombre,-13} |       {item.Valor:F4}       | {(item.Valor*100/total).ToString().PadLeft(6)}%");
                         // 'i' representa el orden o índice de la columna en el set de datos procesado
-                        Console.WriteLine($"Columna {i.ToString().PadRight(5)} | {values[i]} | {values[i]*100/total}%");
+                        //Console.WriteLine($"{i.ToString().PadRight(5)} | {values[i]} | {values[i]*100/total}%");
                     }
                 }
             }
