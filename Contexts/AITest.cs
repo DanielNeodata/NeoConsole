@@ -1,13 +1,15 @@
 ﻿using Microsoft.ML;
 using Microsoft.ML.AutoML;
+using Microsoft.ML.Calibrators;
 using Microsoft.ML.Data;
-using Microsoft.ML.Trainers;
+using Microsoft.ML.Trainers.LightGbm;
 using NeoConsole.BaseClasses;
 using NeoConsole.Classes;
 using System;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Xml.Schema;
 
 
 namespace NeoConsole.Contexts
@@ -50,11 +52,20 @@ namespace NeoConsole.Contexts
     {
 
         [CustomDescription("Prueba del AutoML")]
-        public void AutoModelAI(string QueHace = "e", string MezclaSN = "s")
+        public void AutoModelAI(bool brief = false, bool ToFile = false)
         {
-            QueHace = QueHace.ToLower().Trim();
-            MezclaSN = MezclaSN.ToLower().Trim();
-            Console.WriteLine($"Parametros: $1 {QueHace} | $2: {MezclaSN}");
+            //float l1 = 0.0f;
+            //float l2 = 0.0f;
+            //int iter = 0;
+            string QueHace = "e";
+            string MezclaSN = "s";
+            if (!brief)
+            {
+                Console.WriteLine($"Parametros: $1 {QueHace} | $2: {MezclaSN}");
+            }
+
+            StreamWriter QueFile = new StreamWriter("D:\\Ruben\\www\\neodata.code\\NeoConsole\\salida.csv", append: true);
+            QueFile.WriteLine("L1,L2,Precision,AUC,F1.Score");
 
             var mlContext = new MLContext();
             string dataPath = "D:\\Ruben\\www\\neodata.code\\NeoConsole\\Datos\\universo.csv";
@@ -80,7 +91,7 @@ namespace NeoConsole.Contexts
                 // Buscamos maximizar el AUC para que la evaluación sea integral
                 var settings = new BinaryExperimentSettings
                 {
-                    MaxExperimentTimeInSeconds = 120, // 2 minutos de búsqueda intensa
+                    MaxExperimentTimeInSeconds = 600, // 5 minutos de búsqueda intensa
                     OptimizingMetric = BinaryClassificationMetric.AreaUnderRocCurve
                 };
 
@@ -90,7 +101,7 @@ namespace NeoConsole.Contexts
                 Console.WriteLine("AutoML explorando algoritmos (FastTree, LightGBM, SDCA, etc.)...");
 
                 // En lugar de pasar el dataView directo, puedes intentar barajarlo primero
-                var shuffledData = mlContext.Data.ShuffleRows(dataView, seed: 1);
+                var shuffledData = mlContext.Data.ShuffleRows(dataView);
 
                 // Ejecutar el experimento
                 ExperimentResult<BinaryClassificationMetrics> result;
@@ -139,6 +150,8 @@ namespace NeoConsole.Contexts
                     // Si el ganador es basado en árboles
                     Console.WriteLine("--- Configuración de Árboles ---");
                     Console.WriteLine("El modelo detectó relaciones no lineales (complejas) entre tus datos.");
+                    ITransformer bestModel = result.BestRun.Model;
+                    PrintTopFeatures(bestModel, dataView, "Mora");
                 }
 
                 // 7. Mostrar el tiempo que le tomó decidir
@@ -269,7 +282,7 @@ namespace NeoConsole.Contexts
             else
             {
                 // 3. División Estratificada (80% Entrenamiento / 20% Prueba)
-                var split = mlContext.Data.TrainTestSplit(dataView, testFraction: 0.2);
+                var split = mlContext.Data.TrainTestSplit(dataView, testFraction: 0.1);
                 //var split = mlContext.Data.TrainTestSplit(dataView, testFraction: 0.2, samplingKeyColumnName: "Mora");
                 var previewTrain = split.TrainSet.Preview();
                 var previewTest = split.TestSet.Preview();
@@ -295,38 +308,249 @@ namespace NeoConsole.Contexts
                 .Append(mlContext.Transforms.NormalizeMinMax("IMC"))
                 */
 
+                //l1 = 0.025f;
+                //l2 = 0.003f;
+                //                for (l1 = 0.0f; l1 < 0.3f; l1 = l1 + 0.001f)
+                //                {
+                //for (l2 = 0.0f; l2 < 0.3f; l2 = l2 + 0.001f)
+                //{
                 // Unimos todas las Features
                 //﻿cuotas;monto;edad;ingresos;empresa;comerciante;comercio;sucursal;plan;sexo;ocupacion;calificacion;nacionalidad;localidad
                 var pipeline = mlContext.Transforms.Concatenate("Features", "Cuotas", "Monto", "Edad", "Ingresos", "Empresa", "Comerciante", "Comercio", "Sucursal", "Plan", "Sexo", "Ocupacion", "Calificacion", "Nacionalidad", "Localidad");
 
                 // 5. Configuración de Hiperparámetros (L1 y L2)
+                /*
                 var options = new SdcaLogisticRegressionBinaryTrainer.Options
                 {
                     LabelColumnName = "Mora",
                     FeatureColumnName = "Features",
-                    L1Regularization = 0.03f, // Elimina ruido de campos no relevantes
-                    L2Regularization = 0.01f, // Estabiliza el peso de los precios altos
+                    L1Regularization = l1, // Elimina ruido de campos no relevantes
+                    L2Regularization = l2, // Estabiliza el peso de los precios altos
                     MaximumNumberOfIterations = 500
                 };
+                */
+                var options = new LightGbmBinaryTrainer.Options
+                {
+                    LabelColumnName = "Mora",
+                    FeatureColumnName = "Features",
+                    NumberOfLeaves = 31,
+                    MinimumExampleCountPerLeaf = 20,
+                    LearningRate = 0.05,
+                    NumberOfIterations = 300,
+                    L2CategoricalRegularization = 0.1
 
-                var trainingPipeline = pipeline.Append(mlContext.BinaryClassification.Trainers.SdcaLogisticRegression(options));
+                    /*
+                     * Para N < 10k filas
+                    NumberOfLeaves = 15;
+                    MinimumExampleCountPerLeaf = 30;
+                    L2CategoricalRegularization = 1;
+                    FeatureFraction = 0.7;
+                    */
+                    /*
+                     * Para 10k < N < 100k filas
+                    NumberOfLeaves = 31;
+                    MinimumExampleCountPerLeaf = 20;
+                    L2CategoricalRegularization = 0.1;
+                    FeatureFraction = 0.8;
+                    */
+                    /*
+                     * Mejor version para Microsoft.ML.LightGbm
+                    NumberOfLeaves = 31,
+                    MinimumExampleCountPerLeaf = 20,
+                    LearningRate = 0.05,
+                    NumberOfIterations = 300,
+                    L2CategoricalRegularization = 0.1
+                    */
+                };
+
+                //var trainingPipeline = pipeline.Append(mlContext.BinaryClassification.Trainers.SdcaLogisticRegression(options));
+                var trainingPipeline = pipeline.Append(mlContext.BinaryClassification.Trainers.LightGbm(options));
 
                 // 6. Entrenamiento y Evaluación
-                Console.WriteLine("Iniciando entrenamiento...");
+                if (!brief)
+                {
+                    Console.WriteLine("Iniciando entrenamiento...");
+                }
                 var model = trainingPipeline.Fit(split.TrainSet);
+
+                /*
+                Console.WriteLine("--- Datos del modelo utilizado ---");
+                Console.WriteLine(model.GetType());
+                Console.WriteLine(model.LastTransformer.GetType());
+                var last = model.LastTransformer;
+                Console.WriteLine(last.GetType().FullName);
+                Console.WriteLine("-----------------------");
+                */
+
+                PrintTopFeatures(model, dataView, "Mora");
 
                 var predictions = model.Transform(split.TestSet);
                 //var previewFull = dataView.Preview();
                 var metrics = mlContext.BinaryClassification.Evaluate(predictions, labelColumnName: "Mora");
 
+                /*
+                iter++;
+                Console.WriteLine(iter);
+                
                 // 7. Salida de Resultados
-                MostrarMetricas(metrics);
-
+                if (!brief)
+                {
+                    Console.WriteLine("--- Hiperparámetros ---");
+                    Console.WriteLine($"L1: {l1} - L2: {l2}");
+                }
+                MostrarMetricas(metrics, l1, l2, QueFile, brief, true);
+                if (!brief)
+                {
+                    Console.WriteLine("-----------------------");
+                }
+                */
             }
+            //               }
+            //           }
             // Borra la funcion para tomar lo enviado como parámetro
+            QueFile.Close();
             QueHace = "";
         }
 
+        public static void PrintTopFeatures(
+            ITransformer model,
+            IDataView data,
+            string featureColumnName = "Features",
+            int topN = 0)
+        {
+            try
+            {
+                var chain = (TransformerChain<ITransformer>)model;
+                var lastTransformer = chain.Last();
+                //var chain = model as TransformerChain<
+                //    BinaryPredictionTransformer<
+                //        CalibratedModelParametersBase<
+                //        LightGbmBinaryModelParameters,
+                //        PlattCalibrator>>>;
+                if (lastTransformer == null)
+                {
+                    Console.WriteLine("El modelo no es del tipo esperado.");
+                    return;
+                } else
+                {
+                    Console.WriteLine("--- Datos del modelo utilizado ---");
+                    Console.WriteLine(model.GetType());
+                    Console.WriteLine(lastTransformer.GetType());
+                    Console.WriteLine(lastTransformer.GetType().FullName);
+                    Console.WriteLine("-----------------------");
+                }
+
+                // Casteamos al tipo de predicción binaria genérica
+                // Usamos 'dynamic' para evitar escribir toda la firma genérica gigante que pusiste arriba
+                dynamic binaryTransformer = lastTransformer;
+                var calibratedModel = binaryTransformer.Model;
+
+                // El modelo calibrado tiene una propiedad llamada 'SubModel'
+                // Ahí es donde vive realmente el FastTree o LightGBM
+                var actualModel = calibratedModel.SubModel;
+
+                // 4. Ahora sí, extraemos las importancias (FastTree utiliza Feature Weights)
+                if (actualModel is Microsoft.ML.Trainers.FastTree.FastTreeBinaryModelParameters fastTreeModel)
+                {
+                    VBuffer<float> weights = default;
+                    fastTreeModel.GetFeatureWeights(ref weights);
+
+                    var values = weights.DenseValues().ToArray();
+
+                    // Aquí ya puedes listar los pesos como antes
+                    Console.WriteLine("Pesos de FastTree (dentro del calibrador) extraídos con éxito.");
+
+                    // Transformar datos
+                    var transformedData = model.Transform(data);
+                    var column = transformedData.Schema[featureColumnName];
+
+                    Console.WriteLine($"Columna |   Valor   |   %   ");
+                    var total = values.Sum();
+                    for (int i = 0; i < values.Length; i++)
+                    {
+                        Console.WriteLine($"{i} | {values[i]} | {values[i]*100/total}%");
+                    }
+                }
+                if (actualModel is Microsoft.ML.Trainers.LightGbm.LightGbmBinaryModelParameters)
+                {
+                    chain = (TransformerChain<ITransformer>)model;
+                    lastTransformer = chain.Last();
+
+                    // 2. Acceder al modelo calibrado usando dynamic para simplificar la jerarquía
+                    binaryTransformer = lastTransformer;
+                    calibratedModel = binaryTransformer.Model;
+
+                    // 3. Extraer el submodelo (el motor de LightGBM)
+                    actualModel = calibratedModel.SubModel;
+                    
+                    VBuffer<float> weights = default;
+                    actualModel.GetFeatureWeights(ref weights);
+                    var values = weights.DenseValues().ToArray();
+
+                    float total = values.Sum();
+                    Console.WriteLine("Orden Columna | Importancia (Gain) |       %");
+                    Console.WriteLine("-----------------------------------");
+
+                    for (int i = 0; i < values.Length; i++)
+                    {
+                        // 'i' representa el orden o índice de la columna en el set de datos procesado
+                        Console.WriteLine($"Columna {i.ToString().PadRight(5)} | {values[i]} | {values[i]*100/total}%");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al extraer importancia de LightGBM: {ex.Message}");
+            }
+        }
+
+        /*
+        static void MostrarPesosSDCA(MLContext mlContext, ITransformer model, IDataView data)
+        {
+            try
+            {
+                // 1. Obtener el esquema para los nombres de las columnas
+                var column = model.Transform(data).Schema["Features"];
+                VBuffer<ReadOnlyMemory<char>> slotNames = default;
+                column.GetSlotNames(ref slotNames);
+                var nombres = slotNames.DenseValues().Select(x => x.ToString()).ToArray();
+
+                // 2. Extraer el modelo lineal del pipeline
+                // En un TransformerChain, el último es el predictor
+                var chain = (TransformerChain<ITransformer>)model;
+                var predictionTransformer = chain.Last() as ISingleFeaturePredictionTransformer<object>;
+
+                // 3. CAST CRUCIAL: Convertir a los parámetros de LinearBinaryModelParameters
+                var modelParams = predictionTransformer.Model as Microsoft.ML.Trainers.LinearBinaryModelParameters;
+
+                if (modelParams != null)
+                {
+                    // SDCA tiene una propiedad 'Weights' que es un VBuffer<float>
+                    var weights = modelParams.Weights;
+                    var valoresPesos = weights.DenseValues().ToArray();
+
+                    // 4. Unir y mostrar el Top 3
+                    var ranking = nombres.Select((name, index) => new {
+                        Nombre = name,
+                        Peso = valoresPesos[index]
+                    })
+                                        .OrderByDescending(x => Math.Abs(x.Peso))
+                                        .Take(5);
+
+                    Console.WriteLine("\n=== IMPACTO DE VARIABLES (SDCA LOGISTIC) ===");
+                    foreach (var item in ranking)
+                    {
+                        string sentido = item.Peso > 0 ? "[Aumenta Mora]" : "[Reduce Mora]";
+                        Console.WriteLine($" {sentido} {item.Nombre,-15} : {item.Peso:F4}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error al extraer pesos de SDCA: " + ex.Message);
+            }
+        }
+        */
         static void MostrarPesosEnConsola(MLContext mlContext, ITransformer model, IDataView data)
         {
             try
@@ -358,11 +582,7 @@ namespace NeoConsole.Contexts
                         var weightsArray = weights.DenseValues().ToArray();
 
                         // 5. Unimos nombres con pesos y ordenamos
-                        var top3 = names.Select((name, index) => new
-                        {
-                            Nombre = name,
-                            Valor = Math.Abs(weightsArray[index])
-                        })
+                        var top3 = names.Select((name, index) => new { Nombre = name, Valor = Math.Abs(weightsArray[index]) })
                                         .OrderByDescending(x => x.Valor)
                                         .Take(3);
 
@@ -402,14 +622,35 @@ namespace NeoConsole.Contexts
             File.AppendAllText(archivoLog, linea, Encoding.UTF8);
         }
 
-        private static void MostrarMetricas(BinaryClassificationMetrics metrics)
+        private static void MostrarMetricas(BinaryClassificationMetrics metrics, float hpl1, float hpl2, StreamWriter QueFile, bool brief = false, bool ToFile = false)
         {
-            Console.WriteLine("\n--- RESULTADOS DE EVALUACIÓN ---");
-            Console.WriteLine($"Precisión (Accuracy): {metrics.Accuracy:P2}");
-            Console.WriteLine($"AUC (Área bajo la curva): {metrics.AreaUnderRocCurve:P2}");
-            Console.WriteLine($"F1 Score: {metrics.F1Score:P2}");
-            Console.WriteLine("\nMatriz de Confusión:");
-            Console.WriteLine(metrics.ConfusionMatrix.GetFormattedConfusionTable());
+            if (!ToFile)
+            {
+
+                if (!brief)
+                {
+                    Console.WriteLine("\n--- RESULTADOS DE EVALUACIÓN ---");
+                    Console.WriteLine($"Precisión (Accuracy): {metrics.Accuracy:P2}");
+                    Console.WriteLine($"AUC (Área bajo la curva): {metrics.AreaUnderRocCurve:P2}");
+                    Console.WriteLine($"F1 Score: {metrics.F1Score:P2}");
+                    Console.WriteLine("\nMatriz de Confusión:");
+                    Console.WriteLine(metrics.ConfusionMatrix.GetFormattedConfusionTable());
+                }
+                else
+                {
+                    if (metrics.F1Score > 0.1f)
+                    {
+                        Console.WriteLine($"{hpl1},{hpl2},{metrics.Accuracy:P2},{metrics.AreaUnderRocCurve:P2},{metrics.F1Score:P2}");
+                    }
+                }
+            }
+            else
+            {
+                if (metrics.F1Score > 0.1f)
+                {
+                    QueFile.WriteLine($"{hpl1},{hpl2},{metrics.Accuracy:P2},{metrics.AreaUnderRocCurve:P2},{metrics.F1Score:P2}");
+                }
+            }
         }
     }
 }
