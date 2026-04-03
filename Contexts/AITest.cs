@@ -1,4 +1,5 @@
-﻿using Microsoft.ML;
+﻿using ICSharpCode.SharpZipLib.Core;
+using Microsoft.ML;
 using Microsoft.ML.AutoML;
 using Microsoft.ML.Calibrators;
 using Microsoft.ML.Data;
@@ -48,6 +49,21 @@ namespace NeoConsole.Contexts
         public float[] FeatureContributions { get; set; }
     }
 
+    // La clave es implementar EXACTAMENTE esta interfaz
+    public class PasosExperimento : IProgress<RunDetail<BinaryClassificationMetrics>>
+    {
+        public void Report(RunDetail<BinaryClassificationMetrics> value)
+        {
+            // Aquí es donde capturas los hiperparámetros de CADA intento
+            Console.WriteLine($"Probando: {value.TrainerName}");
+            Console.WriteLine($"Métrica (Accuracy): {value.ValidationMetrics.Accuracy:P2}");
+
+            // El Estimator contiene la "receta" de hiperparámetros
+            // Aunque es un objeto complejo, puedes inspeccionarlo en debug
+            var infoEntrenamiento = value.Estimator;
+        }
+    }
+
     public class AITest : Abstract
     {
 
@@ -86,6 +102,7 @@ namespace NeoConsole.Contexts
 
             if (QueHace == "e")
             {
+                var progressHandler = new PasosExperimento();
 
                 // 2. Configuración del Experimento de AutoML
                 // Buscamos maximizar el AUC para que la evaluación sea integral
@@ -108,11 +125,11 @@ namespace NeoConsole.Contexts
                 ExperimentResult<BinaryClassificationMetrics> result;
                 if (MezclaSN == "s")
                 {
-                    result = experiment.Execute(shuffledData, labelColumnName: "Mora");
+                    result = experiment.Execute(shuffledData, labelColumnName: "Mora", null, null, progressHandler);
                 }
                 else
                 {
-                    result = experiment.Execute(dataView, labelColumnName: "Mora");
+                    result = experiment.Execute(dataView, labelColumnName: "Mora", null, null, progressHandler);
                 }
 
                 // Llamada al método que imprime los pesos de las variables en la consola
@@ -472,6 +489,9 @@ namespace NeoConsole.Contexts
                     Console.WriteLine($"--- Hiperparámetros FastTree ---");
                     Console.WriteLine($"Número de Árboles: {actualModel.NumberOfTrees}");
                     Console.WriteLine($"Hojas por Árbol: {actualModel.NumberOfLeaves}");
+                    // El 'OptimizationMethod' o 'LearningRate' a veces son internos, 
+                    // pero puedes ver las estadísticas de los árboles:
+                    Console.WriteLine($"- CategoricalSplit: {actualModel.CategoricalSplit}");
 
                     VBuffer<float> weights = default;
                     fastTreeModel.GetFeatureWeights(ref weights);
