@@ -30,10 +30,13 @@ namespace NeoConsole.Contexts
         [LoadColumn(9)] public float Low { get; set; }
         [LoadColumn(10)] public float High { get; set; }
         [LoadColumn(11)] public float Close { get; set; }
+        [LoadColumn(12)] public float PercentageMovementPreviousDay { get; set; }
+        [LoadColumn(13)] public float PercentageMovementPreviousWeek { get; set; }
+        [LoadColumn(14)] public float PercentageMovementPreviousMonth { get; set; }
 
         // Columna de destino (Label) - Supongamos que queremos predecir si es "Saludable"
         // Para BinaryClassification, esta columna DEBE ser booleana.
-        [LoadColumn(12)] public bool Sube { get; set; }
+        [LoadColumn(15)] public bool Sube { get; set; }
     }
 
     public class QueData
@@ -440,7 +443,7 @@ namespace NeoConsole.Contexts
                 //id_symbol; DatePrice; Open; RegularMarketVolume; Volume; FiftyTwoWeekLow; FiftyTwoWeekHigh; RegularMarketDayLow; RegularMarketDayHigh; Low; High; Close
 
                 var pipeline = mlContext.Transforms.Categorical.OneHotEncoding("DT", "DatePrice")
-                                     .Append(mlContext.Transforms.Concatenate("Features", "id_symbol", "DT", "Open", "RegularMarketVolume", "Volume", "FiftyTwoWeekLow", "FiftyTwoWeekHigh", "RegularMarketDayLow", "RegularMarketDayHigh", "Low", "High", "Close"));
+                                     .Append(mlContext.Transforms.Concatenate("Features", "id_symbol", "DT", "Open", "RegularMarketVolume", "Volume", "FiftyTwoWeekLow", "FiftyTwoWeekHigh", "RegularMarketDayLow", "RegularMarketDayHigh", "Low", "High", "Close", "PercentageMovementPreviousDay", "PercentageMovementPreviousWeek", "PercentageMovementPreviousMonth"));
 
                 // 5. Configuración de Hiperparámetros (L1 y L2)
                 /*
@@ -650,12 +653,12 @@ namespace NeoConsole.Contexts
                     }
                     listaTemporal.Sort((x, y) => y.Valor.CompareTo(x.Valor));
 
-                    Console.WriteLine("Orden Columna       | Importancia (Gain) | Peso   ");
-                    Console.WriteLine("--------------------------------------------------");
+                    Console.WriteLine("Orden Columna                   | Importancia (Gain) | Peso   ");
+                    Console.WriteLine("--------------------------------------------------------------");
 
                     for (int i = 0; i < weightsArray.Length - 1; i++)
                     {
-                        Console.WriteLine($"{listaTemporal[i].Name,-19} |       {listaTemporal[i].Valor:F4}       | {(listaTemporal[i].Valor * 100 / total).ToString().PadLeft(6)}%");
+                        Console.WriteLine($"{listaTemporal[i].Name,-31} |       {listaTemporal[i].Valor:F4}       | {(listaTemporal[i].Valor * 100 / total).ToString().PadLeft(6)}%");
                         // 'i' representa el orden o índice de la columna en el set de datos procesado
                     }
 
@@ -832,10 +835,28 @@ namespace NeoConsole.Contexts
                     {
                         // 1. Leer valores de la fila
                         bool SubeSN = false;
+                        int QueSube = 0;
                         if (Convert.ToSingle(reader["Close"]) > Convert.ToSingle(reader["Open"]))
+                        {
+                            QueSube++;
+                        }
+                        if (Convert.ToSingle(reader["PercentageMovementPreviousDay"]) > 0)
+                        {
+                            QueSube++;
+                        }
+                        if (Convert.ToSingle(reader["PercentageMovementPreviousWeek"]) > 0)
+                        {
+                            QueSube++;
+                        }
+                        if (Convert.ToSingle(reader["PercentageMovementPreviousMonth"]) > 0)
+                        {
+                            QueSube++;
+                        }
+                        if (QueSube > 2)
                         {
                             SubeSN = true;
                         }
+
 
                         // 3. Agregar a la lista
                         listaResultados.Add(new QueDataInv
@@ -852,8 +873,14 @@ namespace NeoConsole.Contexts
                             Low = Convert.ToSingle(reader["Low"]),
                             High = Convert.ToSingle(reader["High"]),
                             Close = Convert.ToSingle(reader["Close"]),
+                            PercentageMovementPreviousDay = Convert.ToSingle(reader["PercentageMovementPreviousDay"]),
+                            PercentageMovementPreviousWeek = Convert.ToSingle(reader["PercentageMovementPreviousWeek"]),
+                            PercentageMovementPreviousMonth = Convert.ToSingle(reader["PercentageMovementPreviousMonth"]),
                             Sube = SubeSN
                         });
+
+                        // Guardar información de valor del primer día de la semana
+
                     }
                 }
             }
