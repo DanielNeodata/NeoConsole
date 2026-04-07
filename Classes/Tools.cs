@@ -4,6 +4,8 @@ using Microsoft.ML;
 using Microsoft.ML.Data;
 using System;
 using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -219,6 +221,119 @@ namespace NeoConsole.Classes
                 return $"Error de diagnóstico: {ex.Message}";
             }
         }
+
+        public static DataTable GetRecords(string _command)
+        {
+            string connString = (@"encrypt=false;database=neo_trader;server=DESARROLLO\SQLEXPRESS;user=sa;password=08Z5il37;MultipleActiveResultSets=True");
+            DataTable dtResponse = new DataTable();
+            using (SqlConnection connection = new SqlConnection(connString))
+            {
+                connection.Open();
+                SqlCommand cmd = new SqlCommand();
+                cmd.Connection = connection;
+                cmd.CommandType = CommandType.Text;
+                cmd.CommandText = _command;
+                dtResponse.Load(cmd.ExecuteReader());
+            }
+            return dtResponse;
+        }
+
+        public static List<T> ConvertDataTableToList<T>(DataTable dt) where T : new()
+        {
+            List<T> list = new List<T>();
+            foreach (DataRow row in dt.Rows)
+            {
+                T obj = new T();
+                foreach (DataColumn col in dt.Columns)
+                {
+                    var prop = obj.GetType().GetProperty(col.ColumnName);
+                    if (prop != null && row[col] != DBNull.Value) { prop.SetValue(obj, row[col]); }
+                }
+                list.Add(obj);
+            }
+            return list;
+        }
+
+        /*
+        public static async Task<List<AgentViewModelItem>> SaveData(List<AgentViewModelItem> records)
+        {
+            int _i = 0;
+            using (SqlConnection connection = new SqlConnection(neoContext.connString))
+            {
+                connection.Open();
+                SqlCommand cmd = new SqlCommand();
+                cmd.Connection = connection;
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.CommandText = "dbo.mod_trader_data_save";
+
+                foreach (AgentViewModelItem record in records)
+                {
+                    int ndx = 0;
+                    foreach (HistoricalChartInfo item in record.Data.Prices)
+                    {
+                        cmd.Parameters.Clear();
+                        cmd.Parameters.AddWithValue("@Symbol", item.Meta.Symbol);
+                        cmd.Parameters.AddWithValue("@ShortName", item.Meta.ShortName);
+                        cmd.Parameters.AddWithValue("@InstrumentType", item.Meta.InstrumentType);
+                        cmd.Parameters.AddWithValue("@Currency", item.Meta.Currency);
+                        cmd.Parameters.AddWithValue("@DatePrice", item.Date);
+                        cmd.Parameters.AddWithValue("@Open", item.Open);
+                        cmd.Parameters.AddWithValue("@RegularMarketVolume", item.Meta.RegularMarketVolume);
+                        cmd.Parameters.AddWithValue("@Volume", item.Volume);
+                        cmd.Parameters.AddWithValue("@FiftyTwoWeekLow", item.Meta.FiftyTwoWeekLow);
+                        cmd.Parameters.AddWithValue("@FiftyTwoWeekHigh", item.Meta.FiftyTwoWeekHigh);
+                        cmd.Parameters.AddWithValue("@RegularMarketDayLow", item.Meta.RegularMarketDayLow);
+                        cmd.Parameters.AddWithValue("@RegularMarketDayHigh", item.Meta.RegularMarketDayHigh);
+                        cmd.Parameters.AddWithValue("@Low", item.Low);
+                        cmd.Parameters.AddWithValue("@High", item.High);
+                        cmd.Parameters.AddWithValue("@Close", item.Close);
+                        double _PercentageMovementPreviousDay = 0;
+                        double _PercentageMovementPreviousWeek = 0;
+                        double _PercentageMovementPreviousMonth = 0;
+                        if (ndx > 0)
+                        {
+                            // Calcular % mov dia previo
+                            _PercentageMovementPreviousDay = neoContext.DiffPercentage(Convert.ToDouble(item.Close), Convert.ToDouble(record.Data.Prices[ndx - 1].Close));
+
+                            // Si es divisible por 7 calcular % mov semana previa
+                            if (ndx > 7) { _PercentageMovementPreviousWeek = neoContext.DiffPercentage(Convert.ToDouble(item.Close), Convert.ToDouble(record.Data.Prices[(ndx - 7)].Close)); }
+
+                            // Si es divisible por 30 calcular % mov mes previo
+                            if (ndx > 30)
+                            { _PercentageMovementPreviousMonth = neoContext.DiffPercentage(Convert.ToDouble(item.Close), Convert.ToDouble(record.Data.Prices[(ndx - 30)].Close)); }
+                        }
+                        cmd.Parameters.AddWithValue("@PercentageMovementPreviousDay", _PercentageMovementPreviousDay);
+                        cmd.Parameters.AddWithValue("@PercentageMovementPreviousWeek", _PercentageMovementPreviousWeek);
+                        cmd.Parameters.AddWithValue("@PercentageMovementPreviousMonth", _PercentageMovementPreviousMonth);
+                        cmd.Parameters.AddWithValue("@SplitFactor", 0);
+                        _i = Convert.ToInt32(cmd.ExecuteScalar());
+                        ndx++;
+                    }
+                }
+                Consolidate();
+                return records;
+            }
+        }
+
+        public static void Consolidate()
+        {
+            List<SymbolsViewModelItems> _simbolos = ConvertDataTableToList<SymbolsViewModelItems>(GetSymbols());
+            using (SqlConnection connection = new SqlConnection(connString))
+            {
+                connection.Open();
+                SqlCommand cmd = new SqlCommand();
+                cmd.Connection = connection;
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.CommandText = "dbo.mod_trader_symbols_consolida";
+                foreach (SymbolsViewModelItems record in _simbolos)
+                {
+                    cmd.Parameters.Clear();
+                    cmd.Parameters.AddWithValue("@Symbol", record.code);
+                    cmd.ExecuteScalar();
+                }
+            }
+        }
+        */
 
     }
 }

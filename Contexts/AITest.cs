@@ -1,20 +1,41 @@
-﻿using ICSharpCode.SharpZipLib.Core;
-using Microsoft.ML;
+﻿using Microsoft.ML;
 using Microsoft.ML.AutoML;
-using Microsoft.ML.Calibrators;
 using Microsoft.ML.Data;
 using Microsoft.ML.Trainers.LightGbm;
 using NeoConsole.BaseClasses;
 using NeoConsole.Classes;
 using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Xml.Schema;
 
 
 namespace NeoConsole.Contexts
 {
+    public class QueDataInv
+    {
+        //﻿cuotas;monto;edad;ingresos;empresa;comerciante;comercio;sucursal;plan;sexo;ocupacion;calificacion;nacionalidad;localidad
+        [LoadColumn(0)] public float id_symbol { get; set; }
+        [LoadColumn(1)] public string DatePrice { get; set; }
+        [LoadColumn(2)] public float Open { get; set; }
+        [LoadColumn(3)] public float RegularMarketVolume { get; set; }
+        [LoadColumn(4)] public float Volume { get; set; }
+        [LoadColumn(5)] public float FiftyTwoWeekLow { get; set; }
+        [LoadColumn(6)] public float FiftyTwoWeekHigh { get; set; }
+        [LoadColumn(7)] public float RegularMarketDayLow { get; set; }
+        [LoadColumn(8)] public float RegularMarketDayHigh { get; set; }
+        [LoadColumn(9)] public float Low { get; set; }
+        [LoadColumn(10)] public float High { get; set; }
+        [LoadColumn(11)] public float Close { get; set; }
+
+        // Columna de destino (Label) - Supongamos que queremos predecir si es "Saludable"
+        // Para BinaryClassification, esta columna DEBE ser booleana.
+        [LoadColumn(12)] public bool Sube { get; set; }
+    }
+
     public class QueData
     {
         //﻿cuotas;monto;edad;ingresos;empresa;comerciante;comercio;sucursal;plan;sexo;ocupacion;calificacion;nacionalidad;localidad
@@ -66,14 +87,15 @@ namespace NeoConsole.Contexts
 
     public class AITest : Abstract
     {
+        public static string connString = (@"encrypt=false;database=neo_trader;server=DESARROLLO\SQLEXPRESS;user=sa;password=08Z5il37;MultipleActiveResultSets=True");
 
         [CustomDescription("Prueba del AutoML")]
-        public void AutoModelAI(bool brief = false, bool ToFile = false)
+        public void AutoModelAI(int QueMes = 1, int QueAnio = 2024, int CuantosMeses = 1, bool brief = true, bool ToFile = false, string QueOrigen = "db")
         {
             //float l1 = 0.0f;
             //float l2 = 0.0f;
             //int iter = 0;
-            string QueHace = "e";
+            string QueHace = "";
             string MezclaSN = "s";
             if (!brief)
             {
@@ -84,21 +106,67 @@ namespace NeoConsole.Contexts
             QueFile.WriteLine("L1,L2,Precision,AUC,F1.Score");
 
             var mlContext = new MLContext();
-            string dataPath = "D:\\Ruben\\www\\neodata.code\\NeoConsole\\Datos\\universo.csv";
+            IDataView dataView = default;
+            int positivos;
+            int negativos;
+            string ReturnLabel;
+            if (QueOrigen == "csv")
+            {
+                string dataPath = "D:\\Ruben\\www\\neodata.code\\NeoConsole\\Datos\\universo.csv";
 
-            // 2. Carga desde CSV
-            IDataView dataView = mlContext.Data.LoadFromTextFile<QueData>(
-                path: dataPath,
-                hasHeader: true,
-                separatorChar: ','
-            );
+                // 2. Carga desde CSV
+                dataView = mlContext.Data.LoadFromTextFile<QueData>(
+                    path: dataPath,
+                    hasHeader: true,
+                    separatorChar: ','
+                );
 
-            // 1. Verifica los datos
-            var registros = mlContext.Data.CreateEnumerable<QueData>(dataView, reuseRowObject: false).ToList();
-            int positivos = registros.Count(x => x.Mora == true);
-            int negativos = registros.Count(x => x.Mora == false);
+                // 3. Verifica los datos
+                var registros = mlContext.Data.CreateEnumerable<QueData>(dataView, reuseRowObject: false).ToList();
+                positivos = registros.Count(x => x.Mora == true);
+                negativos = registros.Count(x => x.Mora == false);
 
-            Console.WriteLine($"Datos cargados -> Positivos (Mora): {positivos} | Negativos: {negativos}");
+                ReturnLabel = "Mora";
+            }
+            else
+            {
+                string QuePriMes;
+                string QuePriAnio;
+                string QueUltMes;
+                string QueUltAnio;
+                if (QueMes + CuantosMeses > 12)
+                {
+                    QuePriMes = QueMes.ToString().PadLeft(2).Replace(" ", "0");
+                    QuePriAnio = QueAnio.ToString().PadLeft(4).Replace(" ", "0");
+                    QueUltMes = (QueMes + CuantosMeses - 12).ToString().PadLeft(2).Replace(" ", "0");
+                    QueUltAnio = (QueAnio + 1).ToString().PadLeft(4).Replace(" ", "0");
+                }
+                else
+                {
+                    QuePriMes = QueMes.ToString().PadLeft(2).Replace(" ", "0");
+                    QuePriAnio = QueAnio.ToString().PadLeft(4).Replace(" ", "0");
+                    QueUltMes = (QueMes + CuantosMeses).ToString().PadLeft(2).Replace(" ", "0"); ;
+                    QueUltAnio = QueAnio.ToString().PadLeft(4).Replace(" ", "0");
+                }
+                //string queRegistros = $"SELECT * FROM dbo.mod_trader_data WHERE DatePrice < '{QueUltAnio}-{QueUltMes}-01' AND DatePrice >= '{QuePriAnio}-{QuePriMes}-01';";
+                string queRegistros = $"SELECT * FROM dbo.mod_trader_data;";
+                //Console.WriteLine($"Período: 01-{QuePriMes}-{QuePriAnio} al 01-{QueUltMes}-{QueUltAnio}");
+                dataView = CargarDatos(mlContext, connString, queRegistros);
+
+                // Opcional: Verificar que cargó algo
+                var preview = dataView.Preview();
+                Console.WriteLine($"Filas cargadas (primeras): {preview.RowView.Length}");
+
+                // 3. Verifica los datos
+                var registros = mlContext.Data.CreateEnumerable<QueDataInv>(dataView, reuseRowObject: false).ToList();
+                positivos = registros.Count(x => x.Sube == true);
+                negativos = registros.Count(x => x.Sube == false);
+
+                ReturnLabel = "Sube";
+            }
+
+
+            Console.WriteLine($"Datos cargados -> Positivos ({ReturnLabel}): {positivos} | Negativos: {negativos}");
 
             if (QueHace == "e")
             {
@@ -125,11 +193,11 @@ namespace NeoConsole.Contexts
                 ExperimentResult<BinaryClassificationMetrics> result;
                 if (MezclaSN == "s")
                 {
-                    result = experiment.Execute(shuffledData, labelColumnName: "Mora", null, null, progressHandler);
+                    result = experiment.Execute(shuffledData, ReturnLabel, null, null, progressHandler);
                 }
                 else
                 {
-                    result = experiment.Execute(dataView, labelColumnName: "Mora", null, null, progressHandler);
+                    result = experiment.Execute(dataView, ReturnLabel, null, null, progressHandler);
                 }
 
                 // Llamada al método que imprime los pesos de las variables en la consola
@@ -205,7 +273,7 @@ namespace NeoConsole.Contexts
                             }
                 */
                 // 9. Guardar el Log
-                long totalRegistros = dataView.GetColumn<bool>("Mora").Count();
+                long totalRegistros = dataView.GetColumn<bool>(ReturnLabel).Count();
                 string detalleEstimator = bestRun.Estimator.ToString();
                 string topVariables = Tools.ObtenerTopVariables(mlContext, bestRun.Model, dataView);
 
@@ -217,7 +285,7 @@ namespace NeoConsole.Contexts
                     bestRun.TrainerName,
                     bestRun.RuntimeInSeconds,
                     bestRun.Estimator.ToString(),
-                    dataView.GetColumn<bool>("Mora").Count(),
+                    dataView.GetColumn<bool>(ReturnLabel).Count(),
                     topVariables
                 );
 
@@ -225,11 +293,18 @@ namespace NeoConsole.Contexts
                 Console.WriteLine(topVariables);
                 Console.WriteLine($"Log actualizado: {totalRegistros} registros procesados con {bestRun.TrainerName}.");
 
+                /*
                 // 11. Prueba de predicción
                 // Creamos un motor de predicción basado en el mejor modelo encontrado
-                var predictionEngine = mlContext.Model.CreatePredictionEngine<QueData, DataPrediction>(bestRun.Model);
-                var outputSchema = predictionEngine.OutputSchema;
-
+                if (QueOrigen == "csv") {
+                    var predictionEngine1 = mlContext.Model.CreatePredictionEngine<QueData, DataPrediction>(bestRun.Model);
+                    var outputSchema = predictionEngine1.OutputSchema;
+                }
+                else
+                {
+                    var predictionEngine2 = mlContext.Model.CreatePredictionEngine<QueDataInv, DataPrediction>(bestRun.Model);
+                    var outputSchema = predictionEngine2.OutputSchema;
+                }
                 // Creamos un perfil de prueba (ajusta los valores para probar)
                 //﻿cuotas;monto;edad;ingresos;empresa;comerciante;comercio;sucursal;plan;sexo;ocupacion;calificacion;nacionalidad;localidad
                 var prueba = new QueData
@@ -252,6 +327,7 @@ namespace NeoConsole.Contexts
                     Nacionalidad = 0.3466f,
                     Localidad = 0.0161f
                     */
+                /*
                     // SIN MORA
                     // False;0,12;0,0846;0,63;0,0118;0,1;0,0752;0,3373;0,35;0,2125;0,147;0,2068;0,0016;0,3466;0,5332
                     Cuotas = 0.12f,
@@ -270,7 +346,15 @@ namespace NeoConsole.Contexts
                     Localidad = 0.5332f
                 };
 
-                var resultado = predictionEngine.Predict(prueba);
+                DataPrediction resultado = new DataPrediction();
+
+                if (QueOrigen == "csv")
+                {
+                    resultado = predictionEngine1.Predict(prueba);
+                } else
+                {
+                    resultado = predictionEngine2.Predict(prueba);
+                }
 
                 Console.WriteLine("\n--- TEST DE PREDICCIÓN ---");
                 Console.WriteLine($"Perfil: Cuotas {prueba.Cuotas}, Monto {prueba.Monto:F2}, Edad {prueba.Edad}");
@@ -311,12 +395,12 @@ namespace NeoConsole.Contexts
                 //{
                 //    Console.WriteLine($"Key: {pair.Key}, Value: {pair.Value}");
                 //}
-
+                */
             }
             else
             {
                 // 3. División Estratificada (80% Entrenamiento / 20% Prueba)
-                var split = mlContext.Data.TrainTestSplit(dataView, testFraction: 0.1);
+                var split = mlContext.Data.TrainTestSplit(dataView, testFraction: 0.2);
                 //var split = mlContext.Data.TrainTestSplit(dataView, testFraction: 0.2, samplingKeyColumnName: "Mora");
                 var previewTrain = split.TrainSet.Preview();
                 var previewTest = split.TestSet.Preview();
@@ -349,8 +433,14 @@ namespace NeoConsole.Contexts
                 //for (l2 = 0.0f; l2 < 0.3f; l2 = l2 + 0.001f)
                 //{
                 // Unimos todas las Features
+
                 //﻿cuotas;monto;edad;ingresos;empresa;comerciante;comercio;sucursal;plan;sexo;ocupacion;calificacion;nacionalidad;localidad
-                var pipeline = mlContext.Transforms.Concatenate("Features", "Cuotas", "Monto", "Edad", "Ingresos", "Empresa", "Comerciante", "Comercio", "Sucursal", "Plan", "Sexo", "Ocupacion", "Calificacion", "Nacionalidad", "Localidad");
+                //var pipeline = mlContext.Transforms.Concatenate("Features", "Cuotas", "Monto", "Edad", "Ingresos", "Empresa", "Comerciante", "Comercio", "Sucursal", "Plan", "Sexo", "Ocupacion", "Calificacion", "Nacionalidad", "Localidad");
+
+                //id_symbol; DatePrice; Open; RegularMarketVolume; Volume; FiftyTwoWeekLow; FiftyTwoWeekHigh; RegularMarketDayLow; RegularMarketDayHigh; Low; High; Close
+
+                var pipeline = mlContext.Transforms.Categorical.OneHotEncoding("DT", "DatePrice")
+                                     .Append(mlContext.Transforms.Concatenate("Features", "id_symbol", "DT", "Open", "RegularMarketVolume", "Volume", "FiftyTwoWeekLow", "FiftyTwoWeekHigh", "RegularMarketDayLow", "RegularMarketDayHigh", "Low", "High", "Close"));
 
                 // 5. Configuración de Hiperparámetros (L1 y L2)
                 /*
@@ -365,13 +455,13 @@ namespace NeoConsole.Contexts
                 */
                 var options = new LightGbmBinaryTrainer.Options
                 {
-                    LabelColumnName = "Mora",
+                    LabelColumnName = ReturnLabel,
                     FeatureColumnName = "Features",
                     NumberOfLeaves = 31,
                     MinimumExampleCountPerLeaf = 20,
                     LearningRate = 0.05,
                     NumberOfIterations = 300,
-                    L2CategoricalRegularization = 0.1
+                    L2CategoricalRegularization = 1
 
                     /*
                      * Para N < 10k filas
@@ -399,7 +489,6 @@ namespace NeoConsole.Contexts
 
                 //var trainingPipeline = pipeline.Append(mlContext.BinaryClassification.Trainers.SdcaLogisticRegression(options));
                 var trainingPipeline = pipeline.Append(mlContext.BinaryClassification.Trainers.LightGbm(options));
-
                 // 6. Entrenamiento y Evaluación
                 if (!brief)
                 {
@@ -416,11 +505,11 @@ namespace NeoConsole.Contexts
                 Console.WriteLine("-----------------------");
                 */
 
-                PrintTopFeatures(model, dataView, "Mora");
+                PrintTopFeatures(model, dataView, ReturnLabel);
 
                 var predictions = model.Transform(split.TestSet);
                 //var previewFull = dataView.Preview();
-                var metrics = mlContext.BinaryClassification.Evaluate(predictions, labelColumnName: "Mora");
+                var metrics = mlContext.BinaryClassification.Evaluate(predictions, labelColumnName: ReturnLabel);
 
                 /*
                 iter++;
@@ -454,7 +543,8 @@ namespace NeoConsole.Contexts
         {
             try
             {
-                var chain = (TransformerChain<ITransformer>)model;
+                //var chain = (TransformerChain<ITransformer>)model;
+                var chain = (IEnumerable<ITransformer>)model;
                 var lastTransformer = chain.Last();
                 //var chain = model as TransformerChain<
                 //    BinaryPredictionTransformer<
@@ -465,7 +555,8 @@ namespace NeoConsole.Contexts
                 {
                     Console.WriteLine("El modelo no es del tipo esperado.");
                     return;
-                } else
+                }
+                else
                 {
                     Console.WriteLine("--- Datos del modelo utilizado ---");
                     Console.WriteLine(model.GetType());
@@ -513,7 +604,8 @@ namespace NeoConsole.Contexts
                     {
                         topN = nombres.Length;
                     }
-                    var ranking = nombres.Select((name, index) => new {
+                    var ranking = nombres.Select((name, index) => new
+                    {
                         Nombre = "Columna: " + index.ToString().PadLeft(3),
                         Valor = values[index]
                     })
@@ -534,36 +626,40 @@ namespace NeoConsole.Contexts
                 {
                     // Acceso a propiedades específicas de LightGBM
                     Console.WriteLine($"--- Hiperparámetros LightGBM ---");
-                    // Nota: Algunas propiedades son internas, pero las principales están expuestas:
-                    Console.WriteLine($"Número de Árboles: {actualModel.NumberOfTrees}");
 
+                    // 3. OBTENER LOS PESOS
                     VBuffer<float> weights = default;
                     actualModel.GetFeatureWeights(ref weights);
-                    var values = weights.DenseValues().ToArray();
+                    var weightsArray = weights.GetValues().ToArray();
 
-                    float total = values.Sum();
+                    float total = weightsArray.Sum();
 
-                    var nombres = weights.DenseValues().Select(x => x.ToString()).ToArray();
-                    if (topN == 0)
+                    // 4. OBTENER LOS NOMBRES DE LAS COLUMNAS (Desde el esquema)
+                    // Buscamos la columna "Features" que es la que agrupa a todas las demás
+                    string[] nombres = data.Schema
+                                        .Select(col => col.Name)
+                                        .ToArray();
+
+                    // 5. MOSTRAR RESULTADOS
+                    Console.WriteLine("Importancia de Características:");
+                    var listaTemporal = new List<(string Name, float Valor)>();
+                    for (int i = 0; i < nombres.Length - 1; i++)
                     {
-                        topN = nombres.Length;
+                        string name = i < nombres.Length ? nombres[i].ToString() : $"Desconocida_{i}";
+                        listaTemporal.Add((nombres[i], weightsArray[i]));
                     }
-                    var ranking = nombres.Select((name, index) => new {
-                        Nombre = "Columna: " + index.ToString().PadLeft(3),
-                        Valor = values[index]
-                    })
-                                .OrderByDescending(x => x.Valor)
-                                .Take(topN);
+                    listaTemporal.Sort((x, y) => y.Valor.CompareTo(x.Valor));
 
-                    Console.WriteLine("Orden Columna | Importancia (Gain) | Peso   ");
-                    Console.WriteLine("--------------------------------------------");
+                    Console.WriteLine("Orden Columna       | Importancia (Gain) | Peso   ");
+                    Console.WriteLine("--------------------------------------------------");
 
-                    foreach (var item in ranking)
+                    for (int i = 0; i < weightsArray.Length - 1; i++)
                     {
-                        Console.WriteLine($"{item.Nombre,-13} |       {item.Valor:F4}       | {(item.Valor*100/total).ToString().PadLeft(6)}%");
+                        Console.WriteLine($"{listaTemporal[i].Name,-19} |       {listaTemporal[i].Valor:F4}       | {(listaTemporal[i].Valor * 100 / total).ToString().PadLeft(6)}%");
                         // 'i' representa el orden o índice de la columna en el set de datos procesado
-                        //Console.WriteLine($"{i.ToString().PadRight(5)} | {values[i]} | {values[i]*100/total}%");
                     }
+
+                    Console.WriteLine($"Se extrajeron {weightsArray.Length} pesos de importancia.");
                 }
             }
             catch (Exception ex)
@@ -719,6 +815,51 @@ namespace NeoConsole.Contexts
                     QueFile.WriteLine($"{hpl1},{hpl2},{metrics.Accuracy:P2},{metrics.AreaUnderRocCurve:P2},{metrics.F1Score:P2}");
                 }
             }
+        }
+
+        public IDataView CargarDatos(MLContext mlContext, string connectionString, string queRegistros)
+        {
+            var listaResultados = new List<QueDataInv>();
+
+            using (SqlConnection connection = new SqlConnection(connectionString))
+            {
+                SqlCommand command = new SqlCommand(queRegistros, connection);
+                connection.Open();
+
+                using (SqlDataReader reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        // 1. Leer valores de la fila
+                        bool SubeSN = false;
+                        if (Convert.ToSingle(reader["Close"]) > Convert.ToSingle(reader["Open"]))
+                        {
+                            SubeSN = true;
+                        }
+
+                        // 3. Agregar a la lista
+                        listaResultados.Add(new QueDataInv
+                        {
+                            id_symbol = Convert.ToSingle(reader["id_symbol"]),
+                            DatePrice = Convert.ToString(reader["DatePrice"]).Substring(0, 10),
+                            Open = Convert.ToSingle(reader["Open"]),
+                            RegularMarketVolume = Convert.ToSingle(reader["RegularMarketVolume"]),
+                            Volume = Convert.ToSingle(reader["Volume"]),
+                            FiftyTwoWeekLow = Convert.ToSingle(reader["FiftyTwoWeekLow"]),
+                            FiftyTwoWeekHigh = Convert.ToSingle(reader["FiftyTwoWeekHigh"]),
+                            RegularMarketDayLow = Convert.ToSingle(reader["RegularMarketDayLow"]),
+                            RegularMarketDayHigh = Convert.ToSingle(reader["RegularMarketDayHigh"]),
+                            Low = Convert.ToSingle(reader["Low"]),
+                            High = Convert.ToSingle(reader["High"]),
+                            Close = Convert.ToSingle(reader["Close"]),
+                            Sube = SubeSN
+                        });
+                    }
+                }
+            }
+
+            // 4. Convertir la lista final en un IDataView para ML.NET
+            return mlContext.Data.LoadFromEnumerable(listaResultados);
         }
     }
 }
