@@ -93,13 +93,12 @@ namespace NeoConsole.Contexts
         public static string connString = (@"encrypt=false;database=neo_trader;server=DESARROLLO\SQLEXPRESS;user=sa;password=08Z5il37;MultipleActiveResultSets=True");
 
         [CustomDescription("Prueba del AutoML")]
-        public void AutoModelAI(int QueMes = 1, int QueAnio = 2024, int CuantosMeses = 1, bool brief = true, bool ToFile = false, string QueOrigen = "db")
+        public void AutoModelAI()
         {
-            //float l1 = 0.0f;
-            //float l2 = 0.0f;
-            //int iter = 0;
             string QueHace = "";
             string MezclaSN = "s";
+            bool brief = true;
+            string QueOrigen = "db";
             if (!brief)
             {
                 Console.WriteLine($"Parametros: $1 {QueHace} | $2: {MezclaSN}");
@@ -133,32 +132,12 @@ namespace NeoConsole.Contexts
             }
             else
             {
-                string QuePriMes;
-                string QuePriAnio;
-                string QueUltMes;
-                string QueUltAnio;
-                if (QueMes + CuantosMeses > 12)
-                {
-                    QuePriMes = QueMes.ToString().PadLeft(2).Replace(" ", "0");
-                    QuePriAnio = QueAnio.ToString().PadLeft(4).Replace(" ", "0");
-                    QueUltMes = (QueMes + CuantosMeses - 12).ToString().PadLeft(2).Replace(" ", "0");
-                    QueUltAnio = (QueAnio + 1).ToString().PadLeft(4).Replace(" ", "0");
-                }
-                else
-                {
-                    QuePriMes = QueMes.ToString().PadLeft(2).Replace(" ", "0");
-                    QuePriAnio = QueAnio.ToString().PadLeft(4).Replace(" ", "0");
-                    QueUltMes = (QueMes + CuantosMeses).ToString().PadLeft(2).Replace(" ", "0"); ;
-                    QueUltAnio = QueAnio.ToString().PadLeft(4).Replace(" ", "0");
-                }
-                //string queRegistros = $"SELECT * FROM dbo.mod_trader_data WHERE DatePrice < '{QueUltAnio}-{QueUltMes}-01' AND DatePrice >= '{QuePriAnio}-{QuePriMes}-01';";
                 string queRegistros = $"SELECT * FROM dbo.mod_trader_data;";
-                //Console.WriteLine($"Período: 01-{QuePriMes}-{QuePriAnio} al 01-{QueUltMes}-{QueUltAnio}");
                 dataView = CargarDatos(mlContext, connString, queRegistros);
 
                 // Opcional: Verificar que cargó algo
-                var preview = dataView.Preview();
-                Console.WriteLine($"Filas cargadas (primeras): {preview.RowView.Length}");
+                //var preview = dataView.Preview();
+                //Console.WriteLine($"Filas cargadas (primeras): {preview.RowView.Length}");
 
                 // 3. Verifica los datos
                 var registros = mlContext.Data.CreateEnumerable<QueDataInv>(dataView, reuseRowObject: false).ToList();
@@ -524,7 +503,24 @@ namespace NeoConsole.Contexts
                     Console.WriteLine("--- Hiperparámetros ---");
                     Console.WriteLine($"L1: {l1} - L2: {l2}");
                 }
-                MostrarMetricas(metrics, l1, l2, QueFile, brief, true);
+                */
+                MostrarMetricas(metrics);
+
+                /* Permitiría calcular cuanto afectan los cambios de una columna al resultado final
+                 * 
+                foreach (var feature in features)
+                {
+                    var shuffledData = ShuffleColumn(data, feature);
+
+                    var predictions = model.Transform(shuffledData);
+
+                    var metrics = mlContext.BinaryClassification.Evaluate(predictions);
+
+                    importance[feature] = baselineMetric - metrics.Auc;
+                }
+                 *
+                */
+                /*
                 if (!brief)
                 {
                     Console.WriteLine("-----------------------");
@@ -789,35 +785,35 @@ namespace NeoConsole.Contexts
             File.AppendAllText(archivoLog, linea, Encoding.UTF8);
         }
 
-        private static void MostrarMetricas(BinaryClassificationMetrics metrics, float hpl1, float hpl2, StreamWriter QueFile, bool brief = false, bool ToFile = false)
+        private static void MostrarMetricas(BinaryClassificationMetrics metrics)
         {
-            if (!ToFile)
-            {
+            //if (!ToFile)
+            //{
 
-                if (!brief)
-                {
-                    Console.WriteLine("\n--- RESULTADOS DE EVALUACIÓN ---");
-                    Console.WriteLine($"Precisión (Accuracy): {metrics.Accuracy:P2}");
-                    Console.WriteLine($"AUC (Área bajo la curva): {metrics.AreaUnderRocCurve:P2}");
-                    Console.WriteLine($"F1 Score: {metrics.F1Score:P2}");
-                    Console.WriteLine("\nMatriz de Confusión:");
-                    Console.WriteLine(metrics.ConfusionMatrix.GetFormattedConfusionTable());
-                }
-                else
-                {
-                    if (metrics.F1Score > 0.1f)
-                    {
-                        Console.WriteLine($"{hpl1},{hpl2},{metrics.Accuracy:P2},{metrics.AreaUnderRocCurve:P2},{metrics.F1Score:P2}");
-                    }
-                }
+            /*if (!brief)
+            {
+                Console.WriteLine("\n--- RESULTADOS DE EVALUACIÓN ---");
+                Console.WriteLine($"Precisión (Accuracy): {metrics.Accuracy:P2}");
+                Console.WriteLine($"AUC (Área bajo la curva): {metrics.AreaUnderRocCurve:P2}");
+                Console.WriteLine($"F1 Score: {metrics.F1Score:P2}");
+                Console.WriteLine("\nMatriz de Confusión:");
+                Console.WriteLine(metrics.ConfusionMatrix.GetFormattedConfusionTable());
             }
+            else
+            {*/
+            if (metrics.F1Score > 0.1f)
+            {
+                Console.WriteLine($"Acc: {metrics.Accuracy:P2}, AURC: {metrics.AreaUnderRocCurve:P2}, F1: {metrics.F1Score:P2}");
+            }
+            //}
+            /*}
             else
             {
                 if (metrics.F1Score > 0.1f)
                 {
                     QueFile.WriteLine($"{hpl1},{hpl2},{metrics.Accuracy:P2},{metrics.AreaUnderRocCurve:P2},{metrics.F1Score:P2}");
                 }
-            }
+            }*/
         }
 
         public IDataView CargarDatos(MLContext mlContext, string connectionString, string queRegistros)
