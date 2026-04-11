@@ -3,20 +3,19 @@ using Microsoft.ML.Data;
 using Microsoft.ML.Trainers.LightGbm;
 using NeoConsole.BaseClasses;
 using NeoConsole.Classes;
-using Org.BouncyCastle.Ocsp;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Reflection;
 using static TorchSharp.torch.utils;
 
 namespace NeoConsole.Contexts
 {
     public class Trader : Abstract
     {
-        public static string connString = (@"encrypt=false;database=neo_trader;server=DESARROLLO\SQLEXPRESS;user=sa;password=08Z5il37;MultipleActiveResultSets=True");
+        public static string connString = (@"encrypt=false;database=neo_trader;server=localhost;user=sa;password=08Z5il37;MultipleActiveResultSets=True");
 
         [CustomDescription("Testing de Modelo para Trading")]
         public void TraderAI()
@@ -25,68 +24,191 @@ namespace NeoConsole.Contexts
             IDataView dataView = default;
             int positivos;
             int negativos;
-            string ReturnLabel;
 
-            string queRegistros = $"SELECT * FROM dbo.mod_trader_data;";
+            string queRegistros = $"SELECT * FROM dbo.mod_trader_data WHERE DatePrice < '2021-01-01' ORDER BY id_symbol ASC, DatePrice ASC;";
             dataView = CargarDatos(mlContext, connString, queRegistros);
 
-            var registros = mlContext.Data.CreateEnumerable<QueDataInv>(dataView, reuseRowObject: false).ToList();
-            positivos = registros.Count(x => x.Sube == true);
-            negativos = registros.Count(x => x.Sube == false);
+            var registros = mlContext.Data.CreateEnumerable<StockData>(dataView, reuseRowObject: false).ToList();
+            positivos = registros.Count(x => x.Label == true);
+            negativos = registros.Count(x => x.Label == false);
 
-            ReturnLabel = "Label";
 
-            Console.WriteLine($"Datos cargados -> Positivos ({ReturnLabel}): {positivos} | Negativos: {negativos}");
+            Console.WriteLine($"Datos cargados -> Positivos (Label): {positivos} | Negativos: {negativos}");
 
-            var split = mlContext.Data.TrainTestSplit(dataView, testFraction: 0.2);
-            //var split = mlContext.Data.TrainTestSplit(dataView, testFraction: 0.2, samplingKeyColumnName: "Mora");
-            var trainData = split.TrainSet.Preview();
-            var testData = split.TestSet.Preview();
+            var allData = mlContext.Data
+                .CreateEnumerable<StockData>(dataView, false)
+                .OrderBy(x => x.Date)
+                .ToList();
+
+            int splitIndex = (int)(allData.Count * 0.8);
+
+            var trainList = allData.Take(splitIndex).ToList();
+            var testList = allData.Skip(splitIndex).ToList();
+            var trainData = mlContext.Data.LoadFromEnumerable(trainList);
+            var testData = mlContext.Data.LoadFromEnumerable(testList);
+
+            string[] allFeatures = new[]
+            {
+                nameof(StockData.Ret1D),
+                nameof(StockData.Ret5D),
+                nameof(StockData.Ret10D),
+                nameof(StockData.Ret20D),
+                nameof(StockData.PriceSma10),
+                nameof(StockData.PriceSma20),
+                nameof(StockData.PriceSma50),
+                nameof(StockData.Volatility10),
+                nameof(StockData.Volatility20),
+                nameof(StockData.VolumeRatio),
+                nameof(StockData.Rsi),
+                nameof(StockData.BbPosition),
+                nameof(StockData.DistMax),
+                nameof(StockData.DistMin)
+            };
+
+            var pipeline = mlContext.Transforms.Concatenate("Features", allFeatures)
+                        .Append(mlContext.BinaryClassification.Trainers.LightGbm(new Microsoft.ML.Trainers.LightGbm.LightGbmBinaryTrainer.Options
+                        {
+                            NumberOfLeaves = 64,
+                            LearningRate = 0.02,
+                            NumberOfIterations = 500,
+                            MinimumExampleCountPerLeaf = 50,
+                        }));
 
             // 1. Train inicial
-            var model = TrainModel(allFeatures);
+            var trainer = new ModelTrainer(mlContext);
+            var model = trainer.TrainModel(dataView, allFeatures);
+            Console.WriteLine("Entrenamiento inicial");
 
             // 2. Permutation importance
-            var importance = mlContext.BinaryClassification
-                .PermutationFeatureImportance(model, data);
+            var transformedData = model.Transform(dataView);
+
+            // Obtener el último paso del pipeline (LightGBM)
+            // Opción 1: Usar IEnumerable (más flexible)
+            var transformers = (IEnumerable<ITransformer>)model;
+            var lastTransformer = transformers.Last();
+
+            double baseline = EvaluateAuc(mlContext, model, dataView);
+            Console.WriteLine($"Baseline: {baseline}");
+
+            var importances = new Dictionary<string, double>();
+
+            foreach (var feature in allFeatures)
+            {
+                var shuffled = ShuffleFeature(mlContext, dataView, feature);
+
+                var predictions = model.Transform(shuffled);
+
+                var metrics = mlContext.BinaryClassification.Evaluate(predictions);
+
+                var newAuc = metrics.AreaUnderRocCurve;
+
+                importances[feature] = baseline - newAuc;
+                Console.WriteLine($"Feature: {feature} => AUC: {newAuc}");
+            }
 
             // 3. Filtrar features
-            var selectedFeatures = importance
-                .Where(f => f.AreaUnderRocCurve.Mean > 0.001)
-                .Select(f => f.FeatureName)
+            var selectedFeatures = importances
+                .Where(f => f.Value > 0.001)
+                .Select(f => f.Key)
                 .ToList();
 
             // 4. Reentrenar
-            var finalModel = TrainModel(selectedFeatures);
+            if (selectedFeatures.Count > 0)
+            {
+                var finalModel = trainer.TrainModel(dataView, selectedFeatures.ToArray());
+                Console.WriteLine("Modelo mejorado");
+            } else
+            {
+                var finalModel = trainer.TrainModel(dataView, allFeatures.ToArray());
+                Console.WriteLine("Modelo básico");
+            }
 
+            var tunerA = new HyperparameterTuner(mlContext);
 
-            var tuner = new HyperparameterTuner(mlContext);
-
-            var result = tuner.Optimize(
+            if (selectedFeatures.Count > 0)
+            {
+                var resultA = tunerA.Optimize(
                 trainData,
                 testData,
-                selectedFeatures,
+                selectedFeatures.ToArray(),
                 trials: 50);
-
-            var bestModel = result.model;
-            var bestParams = result.bestParams;
-
-            Console.WriteLine($"Best AUC: {result.bestScore}");
-
-            var tuner = new BayesianTuner(mlContext);
-
-            var result = tuner.Optimize(
+                var bestModel = resultA.model;
+                var bestParams = resultA.bestParams;
+                Console.WriteLine($"Optimizacion por hiperparametros - Best AUC: {resultA.bestScore}");
+            }
+            else
+            {
+                var resultA = tunerA.Optimize(
                 trainData,
                 testData,
-                selectedFeatures,
-                iterations: 40);
+                allFeatures.ToArray(),
+                trials: 50);
+                var bestModel = resultA.model;
+                var bestParams = resultA.bestParams;
+                Console.WriteLine($"Optimizacion por hiperparametros - Best AUC: {resultA.bestScore}");
+            }
 
-            Console.WriteLine($"Best Score: {result.bestScore}");
+
+            var tunerB = new BayesianTuner(mlContext);
+
+            if (selectedFeatures.Count > 0)
+            {
+                var resultB = tunerB.Optimize(
+                trainData,
+                testData,
+                selectedFeatures.ToArray(),
+                iterations: 40);
+                Console.WriteLine($"Optimizacion bayesiana - Best Score: {resultB.bestScore}");
+            }
+            else
+            {
+                var resultB = tunerB.Optimize(
+                trainData,
+                testData,
+                allFeatures.ToArray(),
+                iterations: 40);
+                Console.WriteLine($"Optimizacion bayesiana - Best Score: {resultB.bestScore}");
+            }
+        }
+
+        private double EvaluateAuc(MLContext mlContext, ITransformer model, IDataView data)
+        {
+            var predictions = model.Transform(data);
+
+            var metrics = mlContext.BinaryClassification.Evaluate(predictions);
+
+            return metrics.AreaUnderRocCurve;
+        }
+
+        public IDataView ShuffleFeature(MLContext mlContext, IDataView data, string columnName)
+        {
+            var rows = mlContext.Data.CreateEnumerable<StockData>(data, false).ToList();
+
+            Random rng = new Random();
+            PropertyInfo prop = typeof(StockData).GetProperty(columnName, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
+
+            if (prop == null)
+                throw new ArgumentException($"Property '{columnName}' not found on type {typeof(StockData)}");
+
+            int n = rows.Count;
+            while (n > 1)
+            {
+                n--;
+                int k = rng.Next(n + 1);
+
+                // Swap based on column value (optional logic, e.g., compare or just randomize)
+                // For pure randomization, just swap elements
+                StockData value = rows[k];
+                rows[k] = rows[n];
+                rows[n] = value;
+            }
+
+            return mlContext.Data.LoadFromEnumerable(rows);
         }
 
         public IDataView CargarDatos(MLContext mlContext, string connectionString, string queRegistros)
         {
-            var listaResultados = new List<QueDataInv>();
+            var listaRegistros = new List<StockDB>();
 
             using (SqlConnection connection = new SqlConnection(connectionString))
             {
@@ -97,36 +219,14 @@ namespace NeoConsole.Contexts
                 {
                     while (reader.Read())
                     {
-                        // 1. Leer valores de la fila
-                        bool SubeSN = false;
-                        int QueSube = 0;
-                        if (Convert.ToSingle(reader["Close"]) > Convert.ToSingle(reader["Open"]))
-                        {
-                            QueSube++;
-                        }
-                        if (Convert.ToSingle(reader["PercentageMovementPreviousDay"]) > 0)
-                        {
-                            QueSube++;
-                        }
-                        if (Convert.ToSingle(reader["PercentageMovementPreviousWeek"]) > 0)
-                        {
-                            QueSube++;
-                        }
-                        if (Convert.ToSingle(reader["PercentageMovementPreviousMonth"]) > 0)
-                        {
-                            QueSube++;
-                        }
-                        if (QueSube > 2)
-                        {
-                            SubeSN = true;
-                        }
-
+                        // Datos basicos; Retorno; Medias Moviles; Volatilidad; Volumen; RSI y Bollinger; Derivadas
+                        // Tick, Date; Ret1D, Ret5D, Ret10D, Ret20D; PriceSma10, PriceSma20, PriceSma50; Volatility10; VolumeRatio; Rsi, BbPosition; DistMax, DistMin;
 
                         // 3. Agregar a la lista
-                        listaResultados.Add(new QueDataInv
+                        listaRegistros.Add(new StockDB
                         {
                             id_symbol = Convert.ToSingle(reader["id_symbol"]),
-                            DatePrice = Convert.ToString(reader["DatePrice"]).Substring(0, 10),
+                            DatePrice = Convert.ToDateTime(reader["DatePrice"]),
                             Open = Convert.ToSingle(reader["Open"]),
                             RegularMarketVolume = Convert.ToSingle(reader["RegularMarketVolume"]),
                             Volume = Convert.ToSingle(reader["Volume"]),
@@ -139,19 +239,43 @@ namespace NeoConsole.Contexts
                             Close = Convert.ToSingle(reader["Close"]),
                             PercentageMovementPreviousDay = Convert.ToSingle(reader["PercentageMovementPreviousDay"]),
                             PercentageMovementPreviousWeek = Convert.ToSingle(reader["PercentageMovementPreviousWeek"]),
-                            PercentageMovementPreviousMonth = Convert.ToSingle(reader["PercentageMovementPreviousMonth"]),
-                            Sube = SubeSN
+                            PercentageMovementPreviousMonth = Convert.ToSingle(reader["PercentageMovementPreviousMonth"])
                         });
-
-                        // Guardar información de valor del primer día de la semana
-
                     }
                 }
             }
 
+            List<StockData> listaResultados = TransformaDatos.Transforma(listaRegistros);
+
             // 4. Convertir la lista final en un IDataView para ML.NET
             return mlContext.Data.LoadFromEnumerable(listaResultados);
         }
+    }
+}
+
+public class ModelTrainer
+{
+    private readonly MLContext _ml;
+
+    public ModelTrainer(MLContext mlContext)
+    {
+        _ml = mlContext;
+    }
+
+    public ITransformer TrainModel(IDataView data, string[] features)
+    {
+        var pipeline = _ml.Transforms
+            .Concatenate("Features", features)
+            .Append(_ml.BinaryClassification.Trainers.LightGbm(
+                new Microsoft.ML.Trainers.LightGbm.LightGbmBinaryTrainer.Options
+                {
+                    NumberOfLeaves = 64,
+                    LearningRate = 0.02,
+                    NumberOfIterations = 500,
+                    MinimumExampleCountPerLeaf = 50,
+                }));
+
+        return pipeline.Fit(data);
     }
 }
 
@@ -231,7 +355,13 @@ public class BayesianTuner
     private readonly MLContext _ml;
     private readonly Random _rnd = new Random(42);
 
-    private List<(LightGbmBinaryTrainer.Options param, double score)> history = new();
+    public class TuningResult
+    {
+        public LightGbmBinaryTrainer.Options Param { get; set; }
+        public double Score { get; set; }
+    }
+
+    private List<TuningResult> history = new List<TuningResult>();
 
     public BayesianTuner(MLContext ml)
     {
@@ -261,14 +391,18 @@ public class BayesianTuner
 
             var score = Evaluate(trainData, testData, features, candidate);
 
-            history.Add((candidate, score));
+            history.Add(new TuningResult
+            {
+                Param = candidate,
+                Score = score
+            });
 
             Console.WriteLine($"Iter {i + 1} → Score: {score}");
         }
 
-        var best = history.OrderByDescending(h => h.score).First();
+        var best = history.OrderByDescending(h => h.Score).First();
 
-        return (best.param, best.score);
+        return (best.Param, best.Score);
     }
 
     private LightGbmBinaryTrainer.Options RandomSample()
@@ -290,9 +424,9 @@ public class BayesianTuner
     private LightGbmBinaryTrainer.Options GuidedSample()
     {
         var top = history
-            .OrderByDescending(h => h.score)
+            .OrderByDescending(h => h.Score)
             .Take(5)
-            .Select(h => h.param)
+            .Select(h => h.Param)
             .ToList();
 
         var baseParam = top[_rnd.Next(top.Count)];
@@ -353,5 +487,4 @@ public class BayesianTuner
 
         return metrics.AreaUnderRocCurve;
     }
-}
 }
